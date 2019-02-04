@@ -1,51 +1,29 @@
 <template>
-  <div class="pdf-viewer">
-    <div class="pdf-container">
-      <canvas
-        id='canvas'
-        ref='canvas'
-        :width="pdfWidth" :height="pdfHeight"
-        v-bind:style="{ width:pdfPixelWidth + 'px', height:pdfPixelHeight + 'px'}">></canvas>
+  <div class="pdf-viewer" v-on:scroll="onScroll" ref="pdfViewer">
+    <div class="pdf-container" ref="pdfContainer">
+     <pdf-page v-for="(page, key, index) in pdfPages" :key="index" :pdfPage="page">
+     </pdf-page>
     </div>
   </div>
 </template>
 <script>
-import { mapState, mapGetters } from 'vuex'
 import pdfjsLib from 'pdfjs-dist/webpack'
-import {PDFVIEWER_LOAD_START_MUTATION, PDFVIEWER_LOADED_MUTATION} from '../store/modules/edit_page'
+import {PDFVIEWER_LOAD_START_MUTATION, PDFVIEWER_LOADED_MUTATION, PDF_CHANGED_CURRENT_PAGE_MUTATION} from '../store/modules/edit_page'
+import PdfPage from '../components/PdfPage.vue'
 
 export default {
   name: 'PdfViewer',
+  props: ['currentPageInput', 'pdfDataURI'],
+  components: {PdfPage},
   data () {
     return {
       ctx: null,
-      pdfPage: null,
-      viewport: null
+      viewport: null,
+      pdfPages: [],
+      totalPageCount: 0
     }
   },
   computed: {
-    ...mapState({
-      pdfDataURI: state => state.editPage.pdfDataURI,
-    }),
-    ...mapGetters(['pdfScale']),
-    actualSizeViewport () {
-      return this.viewport || {width: 0, height: 0}
-    },
-    pdfWidth () {
-      return this.actualSizeViewport.width
-    },
-    pdfHeight () {
-      return this.actualSizeViewport.height
-    },
-    pdfPixelWidth () {
-      return this.pdfWidth / window.devicePixelRatio
-    },
-    pdfPixelHeight () {
-      return this.pdfHeight / window.devicePixelRatio
-    }
-  },
-  mounted () {
-    this.ctx = this.$refs.canvas.getContext('2d')
   },
   watch: {
     pdfDataURI: {
@@ -53,43 +31,50 @@ export default {
         this.loadPdf()
       }
     },
-    pdfScale: {
-      handler () {
-        this.renderPdf()
+    currentPageInput: {
+      handler (newPage, oldPage) {
+        if (newPage < 1) {
+          newPage = 1
+        } else if (newPage > this.totalPageCount) {
+          newPage = this.totalPageCount
+        }
+        this.scroll(newPage)
       }
     }
   },
   methods: {
+    onScroll (e) {
+      this.$store.commit(PDF_CHANGED_CURRENT_PAGE_MUTATION, this.computeCurrentPage())
+    },
+    scroll (page) {
+      var position = (page - 1) * this.$refs.pdfViewer.scrollHeight / this.totalPageCount
+      this.$refs.pdfViewer.scrollTop = position
+      this.$store.commit(PDF_CHANGED_CURRENT_PAGE_MUTATION, this.computeCurrentPage())
+    },
+    computeCurrentPage () {
+      var position = this.$refs.pdfViewer.scrollTop / this.$refs.pdfViewer.scrollHeight * this.totalPageCount
+      return Math.floor(position + 1.5)
+    },
     loadPdf () {
       this.$store.commit(PDFVIEWER_LOAD_START_MUTATION)
 
       const pdfPath = this.convertDataURIToBinary(this.pdfDataURI)
       var loadingTask = pdfjsLib.getDocument(pdfPath)
 
-      var currentPdfDoc = null
-
       loadingTask.promise.then((pdfDocument) => {
-        // Request a first page
-        currentPdfDoc = pdfDocument
-        console.log(pdfDocument)
-        return pdfDocument.getPage(1)
-      }).then((pdfPage) => {
+        this.totalPageCount = pdfDocument.numPages
+        const pagePromises = Array.from(Array(this.totalPageCount).keys())
+          .map(i => pdfDocument.getPage(i + 1))
+
+        return Promise.all(pagePromises)
+      }).then((pdfPages) => {
         // Display page on the existing canvas with 100% scale.
-        this.pdfPage = pdfPage
-        return this.renderPdf()
+        this.pdfPages = pdfPages
       }).then((e) => {
-        this.$store.commit(PDFVIEWER_LOADED_MUTATION, currentPdfDoc)
+        this.$store.commit(PDFVIEWER_LOADED_MUTATION, this.totalPageCount)
       }).catch(function (reason) {
         console.error('Error: ' + reason)
       })
-    },
-    renderPdf () {
-      this.viewport = this.pdfPage.getViewport(this.pdfScale * 8 / 3) // why need 8/3?
-      var renderTask = this.pdfPage.render({
-        canvasContext: this.ctx,
-        viewport: this.viewport,
-      })
-      return renderTask.promise
     },
     convertDataURIToBinary (dataURI) {
       var BASE64_MARKER = ';base64,'
@@ -118,7 +103,7 @@ export default {
   position: relative;
 }
 .pdf-container {
-  top: 50px;
+  top: 10px;
   position: relative;
 }
 

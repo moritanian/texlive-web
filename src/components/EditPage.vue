@@ -5,20 +5,26 @@
     </split-area>
     <split-area class="pdf-content">
       <div class="pdf-operations">
-        <button @click="onClickZoomIn" class="zoom-in-button"> + </button>
-        <button @click="onClickZoomOut" class="zoom-out-button"> - </button>
-        <span class='pdf-scale-text'>{{pdfScaleText}}</span>
-
-        <input type="number" class="current-page" v-model="currentPage"/>
-        <span class="total-page-count">/ {{totalPageCount}}</span>
-
-        <button @click="onClickCompile" class="compile-button">compile</button>
-        <download-pdf-button class='download-button' :base64="pdfDataURI" />
-        <button @click="onToggleTexOutput" class="toggle-tex-output" :class="{on: visibleTexOutput}">tex output</button>
+        <span class="scale-operation-group">
+          <button @click="onClickZoomIn" class="zoom-in-button"> + </button>
+          <button @click="onClickZoomOut" class="zoom-out-button"> - </button>
+          <span class='pdf-scale-text'>{{pdfScaleText}}</span>
+        </span>
+        <span class="page-operation-group">
+          <input type="number" class="current-page" v-model="currentPageInput"/>
+          <span class="total-page-count">/ {{totalPageCount}}</span>
+        </span>
+        <span class="button-group">
+          <button @click="onClickCompile" class="compile-button">compile</button>
+          <download-pdf-button class='download-button' :base64="pdfDataURI" />
+          <button @click="onToggleTexOutput" class="toggle-tex-output" :class="{on: visibleTexOutput}">tex output</button>
+        </span>
       </div>
       <div class="viewer-container">
         <LoadingModal v-show="loading" />
-        <pdf-viewer v-show="visiblePdfViewer" />
+        <pdf-viewer v-show="visiblePdfViewer"
+          :currentPageInput="parseInt(currentPageInput)"
+          :pdfDataURI="pdfDataURI"/>
         <tex-output v-show="visibleTexOutput" />
       </div>
     </split-area>
@@ -45,7 +51,8 @@ export default {
       pdfScalePercent: state => state.editPage.pdfScalePercent,
       pdfDataURI: state => state.editPage.pdfDataURI,
       loading: state => !!(state.editPage.compiling || state.editPage.pdfLoading),
-      totalPageCount: state => state.editPage.pdfTotalPageCount
+      totalPageCount: state => state.editPage.pdfTotalPageCount,
+      currentPage: state => state.editPage.pdfCurrentPage
     }),
     pdfScaleText () {
       return `${Math.ceil(this.pdfScalePercent)}%`
@@ -56,7 +63,7 @@ export default {
   },
   data () {
     return {
-      currentPage: 1,
+      currentPageInput: 1
     }
   },
   methods: {
@@ -73,6 +80,13 @@ export default {
     },
     onToggleTexOutput () {
       this.$store.commit(TOGGLE_TEX_OUTPUT)
+    }
+  },
+  watch: {
+    currentPage: {
+      handler (val, old) {
+        this.currentPageInput = val
+      }
     }
   }
 }
@@ -94,10 +108,14 @@ export default {
   height: 100%;
 }
 
-button {
-  border-radius: 4px;
-  outline: none;
-  user-select: none;
+.pdf-operations {
+  background-color: rgb(222, 222, 222);
+  height: 26px;
+  padding-top: 2px;
+}
+
+.pdf-operations .scale-operation-group {
+  margin: 0;
 }
 
 .zoom-in-button, .zoom-out-button {
@@ -106,13 +124,12 @@ button {
   font-weight: bold;
 }
 
-.compile-button, .download-button {
-  width: 70px;
-  height: 22px;
+.pdf-operations .page-operation-group {
+  margin-left: 10px;
 }
 
 input.current-page {
-  width: 20px;
+  width: 28px;
   height: 22px;
   outline: none;
   user-select: none;
@@ -121,6 +138,23 @@ input.current-page {
   margin: 0;
   text-align: center;
   border-radius: 2px;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.pdf-operations .button-group {
+  margin: 0 30px 0 20px;
+}
+
+button {
+  border-radius: 4px;
+  outline: none;
+  user-select: none;
+}
+
+.compile-button, .download-button {
+  width: 70px;
+  height: 22px;
 }
 
 .toggle-tex-output {
@@ -131,12 +165,6 @@ input.current-page {
 .toggle-tex-output.on {
   background-color: #2f7ec1;
   color: white;
-}
-
-.pdf-operations {
-  background-color: rgb(222, 222, 222);
-  height: 26px;
-  padding-top: 2px;
 }
 
 .viewer-container {

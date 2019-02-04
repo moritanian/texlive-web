@@ -12,6 +12,7 @@ export const ON_PDFTEX_OUTPUT_MUTATION = 'ON_PDFTEX_OUTPUT_MUTATION'
 
 export const PDF_ZOOMIN_MUTATION = 'PDF_ZOOMIN_MUTATION'
 export const PDF_ZOOMOUT_MUTATION = 'PDF_ZOOMOUT_MUTATION'
+export const PDF_CHANGED_CURRENT_PAGE_MUTATION = 'PDF_CHANGED_CURRENT_PAGE_MUTATION'
 
 export const TOGGLE_TEX_OUTPUT = 'TOGGLE_TEX_OUTPUT'
 
@@ -45,7 +46,8 @@ const state = {
   pdfScalePercent: 50,
   compiling: false,
   visibleTexOutput: false,
-  pdfTotalPageCount: 1
+  pdfTotalPageCount: 1,
+  pdfCurrentPage: 1
 }
 
 const mutations = {
@@ -72,9 +74,9 @@ const mutations = {
   [PDFVIEWER_LOAD_START_MUTATION] (state, data) {
     state.pdfLoading = true
   },
-  [PDFVIEWER_LOADED_MUTATION] (state, doc) {
+  [PDFVIEWER_LOADED_MUTATION] (state, totalPageCount) {
     state.pdfLoading = false
-    state.pdfTotalPageCount = doc.numPages
+    state.pdfTotalPageCount = totalPageCount
   },
   [PDF_ZOOMIN_MUTATION] (state) {
     var percent = state.pdfScalePercent + 10
@@ -83,6 +85,9 @@ const mutations = {
   [PDF_ZOOMOUT_MUTATION] (state) {
     var percent = state.pdfScalePercent - 10
     state.pdfScalePercent = validatePdfScalePercent(percent)
+  },
+  [PDF_CHANGED_CURRENT_PAGE_MUTATION] (state, page) {
+    state.pdfCurrentPage = page
   },
   [TOGGLE_TEX_OUTPUT] (state) {
     state.visibleTexOutput = !state.visibleTexOutput
