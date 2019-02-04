@@ -1,3 +1,5 @@
+import axios from 'axios'
+
 export const COMPILE_SUCCESSED_MUTATION = 'COMPILE_SUCCESSED_MUTATION'
 export const COMPILE_START_MUTATION = 'COMPILE_START_MUTATION'
 export const COMPILE_FAILED_MUTATION = 'COMPILE_FAILED_MUTATION'
@@ -104,7 +106,8 @@ const actions = {
     let sourceCode = state.content
 
     pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024).then(() => {
-      // pdftex.FS_createLazyFile('/', 'snowden.jpg', 'snowden.jpg', true, true)
+      pdftex.FS_createLazyFile('/', 'Vue.png', '/static/Vue.png', true, true)
+      console.log("set vue png")
       pdftex.on_stdout = appendOutput(commit, 'info')
       pdftex.on_stderr = appendOutput(commit, 'error')
       console.time('Execution time')
@@ -115,9 +118,6 @@ const actions = {
           if (pdfDataURI === false) {
             return
           }
-          // showOpenButton(true);
-          // window.location.href = "#open_pdf";
-          // document.getElementById("open_pdf_btn").focus();
 
           commit(COMPILE_SUCCESSED_MUTATION, {
             pdfDataURI: pdfDataURI
@@ -132,14 +132,17 @@ const actions = {
   [CONTENT_SAVE_ACTION] ({state, getters}) {
     localStorage.setItem(STORAGE_KEY, getters.serializedFileInfo)
   },
-  [CONTENT_LOAD_ACTION] ({state, commit, getters}) {
-    var info
+  async [CONTENT_LOAD_ACTION] ({state, commit, getters}) {
     var infoStr = localStorage.getItem(STORAGE_KEY)
 
     if (!infoStr) {
+      const DEFAULT_TEX_FILE = '/static/main.tex'
+      var res = await axios.get(DEFAULT_TEX_FILE)
+      state.content = res.data
       infoStr = getters.serializedFileInfo
     }
-    info = JSON.parse(infoStr)
+
+    var info = JSON.parse(infoStr)
 
     commit(CONTENT_CHANGED_MUTATION, info)
   }
