@@ -1,6 +1,5 @@
 <template>
   <div class="pdf-viewer">
-    <LoadingModal v-show="loading" />
     <div class="pdf-container">
       <canvas
         id='canvas'
@@ -13,12 +12,10 @@
 <script>
 import { mapState, mapGetters } from 'vuex'
 import pdfjsLib from 'pdfjs-dist/webpack'
-import LoadingModal from '../components/LoadingModal.vue'
 import {PDFVIEWER_LOAD_START_MUTATION, PDFVIEWER_LOADED_MUTATION} from '../store/modules/edit_page'
 
 export default {
   name: 'PdfViewer',
-  components: {LoadingModal},
   data () {
     return {
       ctx: null,
@@ -29,7 +26,6 @@ export default {
   computed: {
     ...mapState({
       pdfDataURI: state => state.editPage.pdfDataURI,
-      loading: state => !!(state.editPage.compiling || state.editPage.pdfLoading)
     }),
     ...mapGetters(['pdfScale']),
     actualSizeViewport () {
@@ -70,18 +66,22 @@ export default {
       const pdfPath = this.convertDataURIToBinary(this.pdfDataURI)
       var loadingTask = pdfjsLib.getDocument(pdfPath)
 
+      var currentPdfDoc = null
+
       loadingTask.promise.then((pdfDocument) => {
         // Request a first page
-        return pdfDocument.getPage(1).then((pdfPage) => {
-          // Display page on the existing canvas with 100% scale.
-          this.pdfPage = pdfPage
-          this.renderPdf()
-        })
+        currentPdfDoc = pdfDocument
+        console.log(pdfDocument)
+        return pdfDocument.getPage(1)
+      }).then((pdfPage) => {
+        // Display page on the existing canvas with 100% scale.
+        this.pdfPage = pdfPage
+        return this.renderPdf()
+      }).then((e) => {
+        this.$store.commit(PDFVIEWER_LOADED_MUTATION, currentPdfDoc)
       }).catch(function (reason) {
         console.error('Error: ' + reason)
       })
-
-      this.$store.commit(PDFVIEWER_LOADED_MUTATION)
     },
     renderPdf () {
       this.viewport = this.pdfPage.getViewport(this.pdfScale * 8 / 3) // why need 8/3?

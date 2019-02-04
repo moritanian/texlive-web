@@ -17,8 +17,9 @@ export default {
 
 <style scoped>
 .modal {
-  position: fixed;
-  width: 50%;
+  position: absolute;
+  pointer-events: none;
+  width: 100%;
   height: 100%;
   background-color: #00000038;
   z-index: 100;

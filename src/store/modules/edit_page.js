@@ -44,7 +44,8 @@ const state = {
   pdfDataURI: '',
   pdfScalePercent: 50,
   compiling: false,
-  visibleTexOutput: false
+  visibleTexOutput: false,
+  pdfTotalPageCount: 1
 }
 
 const mutations = {
@@ -71,8 +72,9 @@ const mutations = {
   [PDFVIEWER_LOAD_START_MUTATION] (state, data) {
     state.pdfLoading = true
   },
-  [PDFVIEWER_LOADED_MUTATION] (state, data) {
+  [PDFVIEWER_LOADED_MUTATION] (state, doc) {
     state.pdfLoading = false
+    state.pdfTotalPageCount = doc.numPages
   },
   [PDF_ZOOMIN_MUTATION] (state) {
     var percent = state.pdfScalePercent + 10
@@ -105,11 +107,21 @@ const actions = {
 
     let sourceCode = state.content
 
-    pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024).then(() => {
+    pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024).then(async () => {
+      /*
+      var res = await axios.get('/static/Vue.png', { responseType: 'blob' })
+      var url = window.URL.createObjectURL(res.data)
+      console.log(url)
+      pdftex.FS_createLazyFile('/', 'Vue.png', url, true, true)
+      */
       pdftex.FS_createLazyFile('/', 'Vue.png', '/static/Vue.png', true, true)
-      console.log("set vue png")
+      // console.log('set vue png')
       pdftex.on_stdout = appendOutput(commit, 'info')
       pdftex.on_stderr = appendOutput(commit, 'error')
+      pdftex.on_failed = (e) => {
+        commit(COMPILE_FAILED_MUTATION, e)
+        appendOutput(commit, 'error')(e)
+      }
       console.time('Execution time')
 
       try {

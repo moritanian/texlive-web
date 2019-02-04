@@ -1,5 +1,5 @@
 <template>
-  <div  class="tex-output" :scrollTop="scrollHeight"
+  <div  class="tex-output"
     ref='texOutputElem'>
     <p v-for="(item, key, index) in outputList" :key="index"
       class="output-text" :class="item.type">

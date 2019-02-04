@@ -63,8 +63,5 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-.editor {
-  width: calc(50% - 5px);
-  height: 100%;
-}
+
 </style>

@@ -1,9 +1,9 @@
 <template>
   <div id="app">
     <div class="header">Texlive Web</div>
-    <GitHubRibbon href="https://github.com/moritanian/texlive-web"/>
+    <git-hub-ribbon href="https://github.com/moritanian/texlive-web"/>
     <!--<router-view class="content"></router-view>-->
-    <EditPage />
+    <edit-page />
     <div class="footer"></div>
   </div>
 </template>
