@@ -1,0 +1,23 @@
+<template>
+  <span class="ribbon">
+    <a :href="href">
+      <img width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_darkblue_121621.png?resize=149%2C149" class="attachment-full size-full" alt="Fork me on GitHub" data-recalc-dims="1">
+    </a>
+  </span>
+</template>
+
+<script>
+export default {
+  name: 'GitHubRibbon',
+  props: ['href'],
+}
+</script>
+
+<style scoped>
+.ribbon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 100;
+}
+</style>
