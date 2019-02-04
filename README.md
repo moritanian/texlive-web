@@ -1,10 +1,22 @@
-# texlive-web
+# Texlive-Web
+Web client standalone tex editor using [texlivejs](http://manuels.github.io/texlive.js/) 
 
-> texlive web app
+
+## [Demo](https://texlive-web.tk/)
+<img src="./sample.png"/>
+
+## Dependencies
+- texlive.js
+- Vue
+- Vuex
 
 ## Build Setup
 
 ``` bash
+# clone repo
+git clone --recursive https://github.com/moritanian/texlive-web.git
+cd texlive-web
+
 # install dependencies
 npm install
 
@@ -26,5 +38,3 @@ npm run e2e
 # run all tests
 npm test
 ```
-
-For a detailed explanation on how things work, check out the [guide](http://vuejs-templates.github.io/webpack/) and [docs for vue-loader](http://vuejs.github.io/vue-loader).
