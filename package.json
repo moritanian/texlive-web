@@ -6,13 +6,13 @@
   "private": true,
   "scripts": {
     "dev": "webpack-dev-server --inline --progress --config build/webpack.dev.conf.js",
-    "start": "npm run dev",
+    "start": "concurrently 'npm run proxy' 'npm run dev'",
     "unit": "jest --config test/unit/jest.conf.js --coverage",
     "e2e": "node test/e2e/runner.js",
     "test": "npm run unit && npm run e2e",
     "lint": "eslint --ext .js,.vue src test/unit test/e2e/specs",
     "build": "node build/build.js",
-    "start:prod": "webpack-dev-server  --inline --progress --config build/webpack.prod.conf.js"
+    "proxy": "node build/proxy_server.js"
   },
   "dependencies": {
     "axios": "^0.18.0",
@@ -41,6 +41,7 @@
     "babel-register": "^6.22.0",
     "chalk": "^2.0.1",
     "chromedriver": "^2.27.2",
+    "concurrently": "^4.1.0",
     "copy-webpack-plugin": "^4.6.0",
     "cross-spawn": "^5.0.1",
     "css-loader": "^0.28.0",
