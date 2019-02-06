@@ -17,7 +17,10 @@
         <span class="button-group">
           <button @click="onClickCompile" class="compile-button">compile</button>
           <download-pdf-button class='download-button' :base64="pdfDataURI" />
-          <button @click="onToggleTexOutput" class="toggle-tex-output" :class="{on: visibleTexOutput}">tex output</button>
+          <span class="tex-output">
+            <div v-show="errorCount>0" class="error-count-text">{{errorCount}}</div>
+            <button @click="onToggleTexOutput" class="toggle-tex-output" :class="{on: visibleTexOutput}">tex output</button>
+          </span>
         </span>
       </div>
       <div class="viewer-container">
@@ -33,7 +36,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import Editor from '../components/Editor.vue'
 import PdfViewer from '../components/PdfViewer.vue'
 import TexOutput from '../components/TexOutput.vue'
@@ -53,6 +56,9 @@ export default {
       loading: state => !!(state.editPage.compiling || state.editPage.pdfLoading),
       totalPageCount: state => state.editPage.pdfTotalPageCount,
       currentPage: state => state.editPage.pdfCurrentPage
+    }),
+    ...mapGetters({
+      errorCount: 'pdftexOutputErrorCount'
     }),
     pdfScaleText () {
       return `${Math.ceil(this.pdfScalePercent)}%`
@@ -92,7 +98,7 @@ export default {
 }
 </script>
 
-<style scoped lang='css'>
+<style scoped lang='scss'>
 .edit-content {
   width: calc(100% - 4px);
   height: calc(100% - 36px);
@@ -157,14 +163,35 @@ button {
   height: 22px;
 }
 
-.toggle-tex-output {
-  width: 100px;
-  height: 22px;
-}
+.tex-output {
+  position: relative;
 
-.toggle-tex-output.on {
-  background-color: #2f7ec1;
-  color: white;
+  .error-count-text{
+    background-color: #c71414;
+    color: white;
+    left: 2px;
+    width: 20px;
+    height: 18px;
+    position: absolute;
+    left: 2px;
+    top: -2px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 18px;
+    box-shadow: #888888 1px 1px 1px;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .toggle-tex-output {
+    width: 100px;
+    height: 22px;
+  }
+
+  .toggle-tex-output.on {
+    background-color: #2f7ec1;
+    color: white;
+  }
 }
 
 .viewer-container {

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import PDFTeX from '../../libs/pdftex'
 
 export const COMPILE_SUCCESSED_MUTATION = 'COMPILE_SUCCESSED_MUTATION'
 export const COMPILE_START_MUTATION = 'COMPILE_START_MUTATION'
@@ -19,6 +20,11 @@ export const TOGGLE_TEX_OUTPUT = 'TOGGLE_TEX_OUTPUT'
 export const COMPILE_ACTION = 'COMPILE_ACTION'
 export const CONTENT_SAVE_ACTION = 'CONTENT_SAVE_ACTION'
 export const CONTENT_LOAD_ACTION = 'CONTENT_LOAD_ACTION'
+
+export const PDFTEX_OUTPUT_TYPES = {
+  INFO: 'INFO',
+  ERROR: 'ERROR'
+}
 
 const STORAGE_KEY = 'textlive-web'
 
@@ -102,48 +108,42 @@ const appendOutput = (commit, type) => (msg) => {
 }
 
 const actions = {
-  async [COMPILE_ACTION] ({state, commit}) {
+  [COMPILE_ACTION] ({state, commit}) {
     commit(COMPILE_START_MUTATION)
 
     /* eslint-disable no-undef */
     const pdfWorkerPath = './static/texlive.js/pdftex-worker.js'
+    // const pdfWorkerPath = './static/libs/pdftex-worker.js'
+
     var pdftex = new PDFTeX(pdfWorkerPath)
     /* eslint-enable no-undef */
 
     let sourceCode = state.content
 
     pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024).then(async () => {
-      /*
-      var res = await axios.get('/static/Vue.png', { responseType: 'blob' })
-      var url = window.URL.createObjectURL(res.data)
-      console.log(url)
-      pdftex.FS_createLazyFile('/', 'Vue.png', url, true, true)
-      */
-      pdftex.FS_createLazyFile('/', 'Vue.png', '/static/Vue.png', true, true)
-      // console.log('set vue png')
-      pdftex.on_stdout = appendOutput(commit, 'info')
-      pdftex.on_stderr = appendOutput(commit, 'error')
+      await prepareFile(pdftex)
+
+      pdftex.on_stdout = appendOutput(commit, PDFTEX_OUTPUT_TYPES.INFO)
+      pdftex.on_stderr = appendOutput(commit, PDFTEX_OUTPUT_TYPES.ERROR)
       pdftex.on_failed = (e) => {
         commit(COMPILE_FAILED_MUTATION, e)
-        appendOutput(commit, 'error')(e)
+        appendOutput(commit, PDFTEX_OUTPUT_TYPES.ERROR)(e)
       }
+
       console.time('Execution time')
+      var pdfDataURI = await pdftex.compile(sourceCode)
+      console.timeEnd('Execution time')
 
-      try {
-        pdftex.compile(sourceCode).then((pdfDataURI) => {
-          console.timeEnd('Execution time')
-          if (pdfDataURI === false) {
-            return
-          }
-
-          commit(COMPILE_SUCCESSED_MUTATION, {
-            pdfDataURI: pdfDataURI
-          })
-        })
-      } catch (e) {
-        console.log(e)
-        commit(COMPILE_FAILED_MUTATION)
+      if (pdfDataURI === false) {
+        return commit(COMPILE_FAILED_MUTATION)
       }
+
+      commit(COMPILE_SUCCESSED_MUTATION, {
+        pdfDataURI: pdfDataURI
+      })
+    }).catch((e) => {
+      console.log(e)
+      commit(COMPILE_FAILED_MUTATION, e)
     })
   },
   [CONTENT_SAVE_ACTION] ({state, getters}) {
@@ -172,7 +172,12 @@ const getters = {
       content: state.content
     })
   },
-  pdfScale: state => state.pdfScalePercent / 100
+  pdfScale: state => state.pdfScalePercent / 100,
+  pdftexOutputErrorCount: state => {
+    return state.pdftexOutputList.filter((output) => {
+      return output.type === PDFTEX_OUTPUT_TYPES.ERROR
+    }).length
+  }
 }
 
 export default {
