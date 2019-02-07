@@ -1,7 +1,9 @@
 <template>
-  <button class="download-button">
-    <a :href="href" :download="fileName" class="link">{{text}}</a>
-  </button>
+  <span class="download-button">
+    <a :href="href" :download="fileName" class="link">
+      <img width="20" height="20" :src="downloadIconUrl" alt="downlaod">
+    </a>
+  </span>
 </template>
 
 <script>
@@ -17,6 +19,11 @@ export default {
     'fileName': {
       type: String,
       default: 'original.pdf'
+    }
+  },
+  data () {
+    return {
+      downloadIconUrl: require('./../assets/download-icon.svg')
     }
   },
   computed: {
@@ -38,11 +45,11 @@ export default {
 <style scoped>
 .download-button {
   display: inline-block;
-  background-color: white;
 }
 .link {
   text-decoration: none;
   text-align: center;
+  display: inline-block;
   border-radius: 2px;
   font-size: 12px;
   color: black;

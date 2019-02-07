@@ -1,28 +1,37 @@
 <template>
   <split class="edit-content" :push-other-panes="false">
-    <split-area>
+    <split-area :size="33" :minSize="10">
+      <folder-panel></folder-panel>
+    </split-area>
+    <split-area :size="33" :minSize="10">
       <editor editorId="editor-1" class="editor" />
     </split-area>
-    <split-area class="pdf-content">
-      <div class="pdf-operations">
-        <span class="scale-operation-group">
-          <button @click="onClickZoomIn" class="zoom-in-button"> + </button>
-          <button @click="onClickZoomOut" class="zoom-out-button"> - </button>
-          <span class='pdf-scale-text'>{{pdfScaleText}}</span>
-        </span>
-        <span class="page-operation-group">
-          <input type="number" class="current-page" :value="currentPage" @input="onCurrentPageInput"/>
-          <span class="total-page-count">/ {{totalPageCount}}</span>
-        </span>
-        <span class="button-group">
+    <split-area class="pdf-content" :size="34" :minSize="10">
+      <ul class="pdf-operations">
+        <li class="scale-operation-group">
+          <ul>
+            <li @click="onClickZoomIn" class="zoom-in-button zoom-icon"><img width="20" height="20" :src="enlargeIconUrl"></li>
+            <li @click="onClickZoomOut" class="zoom-out-button zoom-icon"><img width="20" height="20" :src="reduceIconUrl"></li>
+            <li class='pdf-scale-text'>{{pdfScaleText}}</li>
+          </ul>
+        </li>
+        <li class="page-operation-group">
+          <ul>
+            <li><input type="number" class="current-page" :value="currentPage" @input="onCurrentPageInput"/></li>
+            <li><span class="total-page-count">/ {{totalPageCount}}</span></li>
+          </ul>
+        </li>
+        <li class="button-group">
           <button @click="onClickCompile" class="compile-button">compile</button>
           <download-pdf-button class='download-button' :base64="pdfDataURI" />
           <span class="tex-output">
             <div v-show="errorCount>0" class="error-count-text">{{errorCount}}</div>
-            <button @click="onToggleTexOutput" class="toggle-tex-output" :class="{on: visibleTexOutput}">tex output</button>
+            <span @click="onToggleTexOutput" class="toggle-tex-output" :class="{on: visibleTexOutput}">
+              <img width="20" height="20" :src="infoIconUrl" alt='info'>
+            </span>
           </span>
-        </span>
-      </div>
+        </li>
+      </ul>
       <div class="viewer-container">
         <LoadingModal v-show="loading" />
         <pdf-viewer v-show="visiblePdfViewer"
@@ -38,6 +47,7 @@
 
 <script>
 import { mapState, mapGetters } from 'vuex'
+import FolderPanel from '../components/FolderPanel.vue'
 import Editor from '../components/Editor.vue'
 import PdfViewer from '../components/PdfViewer.vue'
 import TexOutput from '../components/TexOutput.vue'
@@ -48,7 +58,7 @@ import LoadingModal from '../components/LoadingModal.vue'
 
 export default {
   name: 'EditPage',
-  components: {Editor, PdfViewer, TexOutput, DownloadPdfButton, LoadingModal, Split, SplitArea},
+  components: {FolderPanel, Editor, PdfViewer, TexOutput, DownloadPdfButton, LoadingModal, Split, SplitArea},
   computed: {
     ...mapState({
       visibleTexOutput: state => state.editPage.visibleTexOutput,
@@ -71,7 +81,10 @@ export default {
   },
   data () {
     return {
-      currentPageInput: 1
+      currentPageInput: 1,
+      enlargeIconUrl: require('./../assets/enlarge-icon.svg'),
+      reduceIconUrl: require('./../assets/reduce-icon.svg'),
+      infoIconUrl: require('./../assets/info-icon.svg')
     }
   },
   methods: {
@@ -100,6 +113,9 @@ export default {
 </script>
 
 <style scoped lang='scss'>
+
+$op-height: 24px;
+
 .edit-content {
   width: calc(100% - 4px);
   height: calc(100% - 36px);
@@ -115,29 +131,119 @@ export default {
   height: 100%;
 }
 
-.pdf-operations {
-  background-color: rgb(222, 222, 222);
-  height: 26px;
-  padding-top: 2px;
-}
-
-.pdf-operations .scale-operation-group {
+ul {
+  list-style-type: none;
+  list-style: none;
   margin: 0;
+  padding: 0;
+  display: inline-block;
 }
 
-.zoom-in-button, .zoom-out-button {
+li {
+  display: inline-block;
+  vertical-align: top;
+}
+
+ul.pdf-operations {
+  background-color: rgb(222, 222, 222);
+  height: $op-height;
+  padding: 2px 0px;
+  width: 100%;
+
+  .scale-operation-group {
+    margin: 0;
+
+    .pdf-scale-text {
+      width: 30px;
+    }
+  }
+
+  .page-operation-group {
+    margin-left: 10px;
+
+    .total-page-count {
+      height: $op-height;
+      line-height: $op-height;
+    }
+  }
+
+  .button-group {
+    margin: 0 60px 0 20px;
+
+    button {
+      border-radius: 4px;
+      outline: none;
+      user-select: none;
+    }
+
+    .compile-button, .download-button {
+      height: $op-height;
+      display: inline-block;
+      vertical-align: top;
+    }
+
+    .compile-button {
+      width: 80px;
+    }
+
+    .download-button {
+      width: 50px;
+    }
+
+    .tex-output {
+      position: relative;
+      vertical-align: top;
+
+      .error-count-text{
+        background-color: #c71414;
+        color: white;
+        width: 20px;
+        height: 18px;
+        position: absolute;
+        left: -4px;
+        top: -2px;
+        border-radius: 4px;
+        font-size: 12px;
+        line-height: 18px;
+        box-shadow: #888888 1px 1px 1px;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      .toggle-tex-output {
+        width: 40px;
+        display: inline-block;
+        height: $op-height;
+      }
+
+      .toggle-tex-output.on {
+        background-color: #65b8ff;
+        color: white;
+        border-radius: 3px;
+        box-shadow: #b1b1b196 0px 0px 4px 1px;
+      }
+    }
+
+  }
+}
+
+.zoom-icon {
   width: 30px;
-  height: 22px;
+  height: $op-height;
   font-weight: bold;
-}
 
-.pdf-operations .page-operation-group {
-  margin-left: 10px;
+  &.zoom-in-button {
+  }
+
+  img {
+    width: 24px;
+    height: $op-height;
+  }
 }
 
 input.current-page {
   width: 28px;
-  height: 22px;
+  height: $op-height;
   outline: none;
   user-select: none;
   border: none;
@@ -146,53 +252,7 @@ input.current-page {
   text-align: center;
   border-radius: 2px;
   font-size: 14px;
-  line-height: 22px;
-}
-
-.pdf-operations .button-group {
-  margin: 0 30px 0 20px;
-}
-
-button {
-  border-radius: 4px;
-  outline: none;
-  user-select: none;
-}
-
-.compile-button, .download-button {
-  width: 70px;
-  height: 22px;
-}
-
-.tex-output {
-  position: relative;
-
-  .error-count-text{
-    background-color: #c71414;
-    color: white;
-    left: 2px;
-    width: 20px;
-    height: 18px;
-    position: absolute;
-    left: 2px;
-    top: -2px;
-    border-radius: 4px;
-    font-size: 12px;
-    line-height: 18px;
-    box-shadow: #888888 1px 1px 1px;
-    pointer-events: none;
-    user-select: none;
-  }
-
-  .toggle-tex-output {
-    width: 100px;
-    height: 22px;
-  }
-
-  .toggle-tex-output.on {
-    background-color: #2f7ec1;
-    color: white;
-  }
+  line-height: $op-height;
 }
 
 .viewer-container {

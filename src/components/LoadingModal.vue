@@ -1,17 +1,12 @@
 <template>
   <div class="modal">
-    <img :src='loadingImageSrc' class="loading-image">
+    <img :src="require('./../assets/loading.gif')" class="loading-image">
   </div>
 </template>
 <script>
 
 export default {
-  name: 'LoadingModal',
-  data () {
-    return {
-      loadingImageSrc: require('./../assets/loading.gif')
-    }
-  }
+  name: 'LoadingModal'
 }
 </script>
 

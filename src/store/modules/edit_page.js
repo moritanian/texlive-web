@@ -153,7 +153,7 @@ const actions = {
     var infoStr = localStorage.getItem(STORAGE_KEY)
 
     if (!infoStr) {
-      const DEFAULT_TEX_FILE = '/static/main.tex'
+      const DEFAULT_TEX_FILE = '/static/demo/main.tex'
       var res = await axios.get(DEFAULT_TEX_FILE)
       state.content = res.data
       infoStr = getters.serializedFileInfo
