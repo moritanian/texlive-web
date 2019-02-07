@@ -11,7 +11,7 @@
           <span class='pdf-scale-text'>{{pdfScaleText}}</span>
         </span>
         <span class="page-operation-group">
-          <input type="number" class="current-page" v-model="currentPageInput"/>
+          <input type="number" class="current-page" :value="currentPage" @input="onCurrentPageInput"/>
           <span class="total-page-count">/ {{totalPageCount}}</span>
         </span>
         <span class="button-group">
@@ -26,8 +26,9 @@
       <div class="viewer-container">
         <LoadingModal v-show="loading" />
         <pdf-viewer v-show="visiblePdfViewer"
-          :currentPageInput="parseInt(currentPageInput)"
-          :pdfDataURI="pdfDataURI"/>
+          :currentPageInput="currentPageInput"
+          :pdfDataURI="pdfDataURI"
+          :pdfScale="pdfScale"/>
         <tex-output v-show="visibleTexOutput" />
       </div>
     </split-area>
@@ -58,7 +59,8 @@ export default {
       currentPage: state => state.editPage.pdfCurrentPage
     }),
     ...mapGetters({
-      errorCount: 'pdftexOutputErrorCount'
+      errorCount: 'pdftexOutputErrorCount',
+      pdfScale: 'pdfScale'
     }),
     pdfScaleText () {
       return `${Math.ceil(this.pdfScalePercent)}%`
@@ -86,12 +88,11 @@ export default {
     },
     onToggleTexOutput () {
       this.$store.commit(TOGGLE_TEX_OUTPUT)
-    }
-  },
-  watch: {
-    currentPage: {
-      handler (val, old) {
-        this.currentPageInput = val
+    },
+    onCurrentPageInput (e) {
+      var value = parseInt(e.target.value)
+      if (!isNaN(value)) {
+        this.currentPageInput = value
       }
     }
   }

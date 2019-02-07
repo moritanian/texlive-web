@@ -6,19 +6,23 @@
     v-bind:style="{ width:pdfPixelWidth + 'px', height:pdfPixelHeight + 'px'}">></canvas>
 </template>
 <script>
-import { mapGetters } from 'vuex'
-
+const SCALE_CORRECTION_RATIO = 8 / 3 // why 8 / 3 ??
 export default {
   name: 'PdfPage',
-  props: ['pdfPage'],
+  props: {
+    pdfPage: Object,
+    pdfScale: Number,
+    pageNum: Number
+  },
   data () {
     return {
       ctx: null,
-      viewport: null
+      viewport: null,
+      previousPdfPage: null,
+      needRender: false
     }
   },
   computed: {
-    ...mapGetters(['pdfScale']),
     actualSizeViewport () {
       return this.viewport || {width: 0, height: 0}
     },
@@ -41,7 +45,15 @@ export default {
   },
   watch: {
     pdfScale: {
-      handler () {
+      handler (newScale, oldScale) {
+        this.needRender = true
+
+        // only update scale if no pdfPage
+        if (!this.pdfPage) {
+          this.viewport = this.previousPdfPage.getViewport(this.pdfScale * SCALE_CORRECTION_RATIO)
+          return
+        }
+
         this.renderPdf()
       }
     },
@@ -53,7 +65,16 @@ export default {
   },
   methods: {
     renderPdf () {
-      this.viewport = this.pdfPage.getViewport(this.pdfScale * 8 / 3) // why need 8/3?
+      if (!this.pdfPage) {
+        return
+      }
+      // Do not render if already rendered
+      if (!this.needRender && this.previousPdfPage === this.pdfPage) {
+        return
+      }
+      this.needRender = false
+      this.previousPdfPage = this.pdfPage
+      this.viewport = this.pdfPage.getViewport(this.pdfScale * SCALE_CORRECTION_RATIO)
       var renderTask = this.pdfPage.render({
         canvasContext: this.ctx,
         viewport: this.viewport,
