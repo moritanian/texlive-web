@@ -10,13 +10,25 @@ import {
 import * as ace from 'brace'
 import 'brace/mode/javascript'
 import 'brace/mode/tex'
+import 'brace/mode/text'
 import 'brace/theme/monokai'
+import {getFileExtension} from './../util/util'
+
+const EXTENSION_LANG_TABLE = {
+  'tex': 'tex',
+  'js': 'javascript',
+  'txt': 'text',
+  'md': 'markdown',
+  'css': 'css',
+  'json': 'json'
+}
 
 export default {
   name: 'Editor',
   props: ['editorId'],
   computed: mapState({
     content: state => state.editPage.content,
+    selectedItemName: state => state.editPage.selectedItemName,
     lang: state => state.editPage.lang,
     theme: state => state.editPage.theme
   }),
@@ -25,8 +37,6 @@ export default {
     const theme = this.theme || 'github'
 
     this.editor = ace.edit(this.editorId)
-    this.editor.setValue(this.content, 1)
-
     this.editor.getSession().setMode(`ace/mode/${lang}`)
     this.editor.setTheme(`ace/theme/${theme}`)
 
@@ -57,6 +67,20 @@ export default {
       this.editor.setValue(this.content, -1)
       this.$store.dispatch(COMPILE_ACTION)
     })
+  },
+  watch: {
+    content: {
+      handler () {
+        var ext = getFileExtension(this.selectedItemName)
+        var lang = EXTENSION_LANG_TABLE[ext]
+        if (!lang) {
+          lang = EXTENSION_LANG_TABLE.txt
+        }
+        lang = 'javascript'
+        this.editor.getSession().setMode(`ace/mode/${lang}`)
+        this.editor.setValue(this.content, -1)
+      }
+    }
   }
 }
 </script>

@@ -6,9 +6,15 @@ Web client standalone tex editor using [texlivejs](http://manuels.github.io/texl
 <img src="./sample.png"/>
 
 ## Dependencies
-- texlive.js
+- [texlive.js](http://manuels.github.io/texlive.js/)
 - Vue
 - Vuex
+- [vue-split-panel](https://github.com/bajaniyarohit/vue-split-panel)
+- [BrowserFS](https://github.com/jvilk/BrowserFS)
+
+
+## Materials
+[ICOOON MONO](http://icooon-mono.com/)
 
 ## Build Setup
 

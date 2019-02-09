@@ -1,12 +1,13 @@
 <template>
   <split class="edit-content" :push-other-panes="false">
-    <split-area :size="33" :minSize="10">
+    <split-area :size="15" :minSize="10">
       <folder-panel></folder-panel>
     </split-area>
     <split-area :size="33" :minSize="10">
-      <editor editorId="editor-1" class="editor" />
+      <editor editorId="editor-1" class="editor" v-show="visibleEditor"/>
+      <image-viewer :base64="imageViewerBase64" class="image-viewer" v-show="visibleImageViewer"></image-viewer>
     </split-area>
-    <split-area class="pdf-content" :size="34" :minSize="10">
+    <split-area class="pdf-content" :size="52" :minSize="10">
       <ul class="pdf-operations">
         <li class="scale-operation-group">
           <ul>
@@ -49,6 +50,7 @@
 import { mapState, mapGetters } from 'vuex'
 import FolderPanel from '../components/FolderPanel.vue'
 import Editor from '../components/Editor.vue'
+import ImageViewer from '../components/ImageViewer.vue'
 import PdfViewer from '../components/PdfViewer.vue'
 import TexOutput from '../components/TexOutput.vue'
 import DownloadPdfButton from '../components/DownloadPdfButton.vue'
@@ -58,9 +60,11 @@ import LoadingModal from '../components/LoadingModal.vue'
 
 export default {
   name: 'EditPage',
-  components: {FolderPanel, Editor, PdfViewer, TexOutput, DownloadPdfButton, LoadingModal, Split, SplitArea},
+  components: {FolderPanel, Editor, ImageViewer, PdfViewer, TexOutput, DownloadPdfButton, LoadingModal, Split, SplitArea},
   computed: {
     ...mapState({
+      visibleImageViewer: state => state.editPage.visibleImageViewer,
+      imageViewerBase64: state => state.editPage.imageViewerBase64,
       visibleTexOutput: state => state.editPage.visibleTexOutput,
       pdfScalePercent: state => state.editPage.pdfScalePercent,
       pdfDataURI: state => state.editPage.pdfDataURI,
@@ -77,6 +81,9 @@ export default {
     },
     visiblePdfViewer () {
       return !this.visibleTexOutput
+    },
+    visibleEditor () {
+      return !this.visibleImageViewer
     }
   },
   data () {
@@ -124,6 +131,11 @@ $op-height: 24px;
 
 .editor {
   min-width: 20px;
+  height: 100%;
+}
+
+.image-viewer {
+  width: 100%;
   height: 100%;
 }
 
@@ -184,6 +196,11 @@ ul.pdf-operations {
 
     .compile-button {
       width: 80px;
+      font-family: serif;
+      font-size: 13px;
+      text-align: center;
+      font-weight: bold;
+      line-height: 13px;
     }
 
     .download-button {

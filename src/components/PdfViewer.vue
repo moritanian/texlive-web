@@ -93,7 +93,7 @@ export default {
       const pdfPath = this.convertDataURIToBinary(this.pdfDataURI)
       var loadingTask = pdfjsLib.getDocument(pdfPath)
 
-      const inflationRatio = 10
+      const inflationRatio = 1
       loadingTask.promise.then((pdfDocument) => {
         const pagePromises = Array.from(Array(pdfDocument.numPages).keys())
           .map(i => pdfDocument.getPage(i + 1))
