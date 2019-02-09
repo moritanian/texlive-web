@@ -55,6 +55,8 @@ import PdfViewer from '../components/PdfViewer.vue'
 import TexOutput from '../components/TexOutput.vue'
 import DownloadPdfButton from '../components/DownloadPdfButton.vue'
 import {COMPILE_ACTION, PDF_ZOOMIN_MUTATION, PDF_ZOOMOUT_MUTATION, TOGGLE_TEX_OUTPUT} from '../store/modules/edit_page'
+import { FILE_OPEN_ACTION } from '../store/modules/file_system'
+
 import {Split, SplitArea} from 'vue-split-panel'
 import LoadingModal from '../components/LoadingModal.vue'
 
@@ -70,7 +72,9 @@ export default {
       pdfDataURI: state => state.editPage.pdfDataURI,
       loading: state => !!(state.editPage.compiling || state.editPage.pdfLoading),
       totalPageCount: state => state.editPage.pdfTotalPageCount,
-      currentPage: state => state.editPage.pdfCurrentPage
+      currentPage: state => state.editPage.pdfCurrentPage,
+      env: state => state.fileSystem.env,
+      targetTexFile: state => state.editPage.targetTexFile
     }),
     ...mapGetters({
       errorCount: 'pdftexOutputErrorCount',
@@ -93,6 +97,15 @@ export default {
       reduceIconUrl: require('./../assets/reduce-icon.svg'),
       infoIconUrl: require('./../assets/info-icon.svg')
     }
+  },
+  mounted () {
+    var path = this.env.require('path')
+    var parsed = path.parse(this.targetTexFile)
+    this.$store.dispatch(
+      FILE_OPEN_ACTION, {name: parsed.name, directoryFullPath: parsed.dir, env: this.env}
+    ).then(() => {
+      this.$store.dispatch(COMPILE_ACTION)
+    })
   },
   methods: {
     onClickZoomIn () {

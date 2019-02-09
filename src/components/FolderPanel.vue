@@ -7,7 +7,11 @@
       <upload-modal id="upload-modal" v-show="visibleUploadModal"></upload-modal>
     </transition>
     <div class="dirs-area">
-      <directory-tree :env="env" fullPath="/" :selectedItemName="selectedItemName"></directory-tree>
+      <directory-tree
+        :isRoot="false"
+        :env="env"
+        fullPath="/"
+        :selectedItemName="selectedItemName"></directory-tree>
     </div>
   </div>
 </template>
@@ -61,6 +65,7 @@ export default {
   border-top: solid 1px #6b6b6b;
   margin-top: 2px;
   padding-top: 5px;
+  font-family: serif;
 }
 
 .fade-enter-active {

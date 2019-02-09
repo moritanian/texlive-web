@@ -1,7 +1,7 @@
 <template>
   <div class="file-item"
-    @click="onClickHandler"
-    @contextmenu.prevent="onContextmenuHandler"
+    @click="onClick"
+    @contextmenu.prevent="onContextmenu"
     :class="{selected: selected}">
     <div class="icon">
       <img width="30" height="30" :src="fileIconUrl" :alt="name">
@@ -10,7 +10,8 @@
     <input class="name-text-input"
       v-show="mode===RENAME_MODE"
       :value="name" @input="onChangeInput"
-      v-on:keyup.enter="onEnterInput">
+      v-on:keyup.enter="onEnterInput"
+      v-focus="mode===RENAME_MODE">
   </div>
 </template>
 <script>
@@ -36,9 +37,6 @@ export default {
       type: String,
       default: DEFAULT_MODE
     },
-    onClickItem: Function,
-    onContextmenu: Function,
-    onRename: Function,
     selected: {
       type: Boolean,
       default: false
@@ -79,25 +77,30 @@ export default {
     RENAME_MODE: () => RENAME_MODE
   },
   methods: {
-    onClickHandler () {
-      if (this.onClickItem) {
-        this.onClickItem(this.name)
-      }
+    onClick (e) {
+      this.$emit('clickitem', e, this.name, this.mode)
     },
-    onContextmenuHandler (e) {
-      if (this.onContextmenu) {
-        this.onContextmenu(e, this.name)
-      }
+    onContextmenu (e) {
+      this.$emit('contextmenu', e, this.name)
     },
     onEnterInput (e) {
-      if (this.onRename) {
-        this.onRename(this.name, this.nameInputValue)
-      }
+      this.$emit('rename', e, this.name, this.nameInputValue)
     },
     onChangeInput (e) {
       this.nameInputValue = e.target.value
     }
-  }
+  },
+  directives: {
+    focus: {
+      update (el, binding) {
+        if (binding.value) {
+          el.focus()
+        } else {
+          el.blur()
+        }
+      }
+    }
+  },
 }
 
 </script>
@@ -106,6 +109,8 @@ export default {
 .file-item {
   position: relative;
   padding: 2px 0px;
+  height: 24px;
+  user-select: none;
 
   &.selected {
     background-color: #a7a7a7;
@@ -134,16 +139,18 @@ export default {
     cursor: default;
     text-align: left;
     margin-left: 25px;
-    user-select: none;
   }
 
   .name-text-input {
-    border: none;
     height: 17px;
     line-height: 17px;
     text-decoration: none;
     padding-left: 4px;
     font-size: 12px;
+    min-width: 20px;
+    width: 70%;
+    max-width: 120px;
+    display: block;
   }
 
   &after {

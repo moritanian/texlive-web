@@ -2,13 +2,15 @@
   <div>
 
     <file-item :name="directory"
-      v-if="!isRoot"
       :isDirectory="true"
       :open="open"
-      :onClickItem="onClickFolderItem"
-      :onContextmenu="onContextmenuFolder"
-      :onRename="onRenameFolder"
-      :mode="folderItemMode"></file-item>
+      @clickitem="onClickFolderItem"
+      @contextmenu="onContextmenuFolder"
+      @rename="onRenameFolder"
+      :mode="folderItemMode"
+      :selected="folderItemMode===RENAME_MODE"
+      v-if="!isRoot"
+      ></file-item>
 
     <div class="children" :class="{root: isRoot}"
       v-show="open">
@@ -29,9 +31,9 @@
         <file-item v-for="(file, index) in fileList"
           :key="index" :name="file.name"
           @click="onClickFileItem"
-          :onClickItem="onClickFileItem"
-          :onContextmenu="onContextmenu"
-          :onRename="onRename"
+          @clickitem="onClickFileItem"
+          @contextmenu="onContextmenu"
+          @rename="onRename"
           :mode="file.mode"
           :selected="selectedItemName===getFullPath(file.name)"></file-item>
       </upload-panel>
@@ -72,6 +74,10 @@ export default {
     selectedItemName: {
       type: String,
       default: null
+    },
+    isRoot: {
+      type: Boolean,
+      default: false
     }
   },
   data () {
@@ -84,7 +90,6 @@ export default {
     }
   },
   created () {
-    console.log(this.fullPath)
     this.fs = this.env.require('fs')
     this.path = this.env.require('path')
   },
@@ -93,11 +98,9 @@ export default {
   },
   computed: {
     directory () {
-      return this.path.parse(this.fullPath).name
+      return this.path.parse(this.fullPath).name || '/'
     },
-    isRoot () {
-      return this.fullPath === '/'
-    }
+    RENAME_MODE: () => RENAME_MODE
   },
   methods: {
     toggle () {
@@ -105,7 +108,6 @@ export default {
     },
     update () {
       this.fs.readdir(this.fullPath, (err, files) => {
-        console.log(files)
         if (err) {
           console.log(err)
           return
@@ -117,7 +119,7 @@ export default {
       var subDirectories = []
       var fileList = []
 
-      files.forEach(fileName => {
+      files.filter(fileName => fileName).forEach(fileName => {
         var fullPath = this.path.join(this.fullPath, fileName)
         var stats = this.fs.statSync(fullPath)
         if (stats.isDirectory()) { // folder
@@ -133,14 +135,16 @@ export default {
       this.subDirectories = subDirectories
       this.fileList = fileList
     },
-    onClickFileItem (fileName) {
-      this.$store.dispatch(FILE_OPEN_ACTION, {name: fileName, directoryFullPath: this.fullPath, env: this.env})
+    onClickFileItem (e, fileName, mode) {
+      if (mode === DEFAULT_MODE) {
+        this.$store.dispatch(FILE_OPEN_ACTION, {name: fileName, directoryFullPath: this.fullPath, env: this.env})
+      }
     },
     onClickFolderItem () {
       this.toggle()
     },
     onContextmenu (e, name) {
-      this.onClickFileItem(name)
+      this.onClickFileItem(e, name, DEFAULT_MODE)
       this.contextMenuTarget = name
       this.$refs.ctxMenu.open()
     },
@@ -177,7 +181,6 @@ export default {
       this.contextMenuTarget = null
     },
     onClickContextmenuDeleteFolder (e) {
-      console.log(this.fullPath)
       this.fs.rmdir(this.fullPath, (err) => {
         if (err) {
           console.log(err)
@@ -201,7 +204,6 @@ export default {
     },
     onClickContextmenuNewFolder (e) {
       var directoryName = 'new'
-      console.log(this.getFullPath(directoryName))
 
       this.fs.mkdir(this.getFullPath(directoryName), 0o777, (err) => {
         if (err) {
@@ -212,15 +214,18 @@ export default {
         this.update()
       })
     },
-    onRename (oldName, newName) {
-      this.fs.rename(this.getFullPath(oldName), this.getFullPath(newName), (e) => {
-        console.log(e)
+    onRename (e, oldName, newName) {
+      this.fs.rename(this.getFullPath(oldName), this.getFullPath(newName), (err) => {
+        if (err) {
+          console.log(err)
+          return false
+        }
+
         this.update()
       })
     },
-    onRenameFolder (oldName, newName) {
+    onRenameFolder (e, oldName, newName) {
       var newPath = this.path.join(this.path.parse(this.fullPath).dir, newName)
-      console.log(newPath)
       this.fs.rename(this.fullPath, newPath, (err) => {
         if (err) {
           console.log(err)
@@ -231,7 +236,6 @@ export default {
       })
     },
     getFullPath (fileName) {
-      console.log(fileName)
       return this.path.join(this.fullPath, fileName)
     },
     getFileItemMode (fileName) {
@@ -261,6 +265,7 @@ export default {
 
 .context-menu {
   min-width: 120px;
+  user-select: none;
   li {
     padding: 2px 0px 2px 10px;
     cursor: default;
