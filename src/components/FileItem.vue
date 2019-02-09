@@ -78,13 +78,14 @@ export default {
   },
   methods: {
     onClick (e) {
-      this.$emit('clickitem', e, this.name, this.mode)
+      console.log('click')
+      this.$emit('clickitem', e, this.name, this.mode, this.isDirectory)
     },
     onContextmenu (e) {
-      this.$emit('contextmenu', e, this.name)
+      this.$emit('contextmenu', e, this.name, this.isDirectory)
     },
     onEnterInput (e) {
-      this.$emit('rename', e, this.name, this.nameInputValue)
+      this.$emit('rename', e, this.name, this.nameInputValue, this.isDirectory)
     },
     onChangeInput (e) {
       this.nameInputValue = e.target.value

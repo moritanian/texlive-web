@@ -1,47 +1,39 @@
 <template>
   <div>
 
-    <file-item :name="directory"
-      :isDirectory="true"
-      :open="open"
-      @clickitem="onClickFolderItem"
-      @contextmenu="onContextmenuFolder"
-      @rename="onRenameFolder"
-      :mode="folderItemMode"
-      :selected="folderItemMode===RENAME_MODE"
-      v-if="!isRoot"
-      ></file-item>
-
-    <div class="children" :class="{root: isRoot}"
-      v-show="open">
+    <div class="children" :class="{root: isRoot}">
 
       <!-- Sub directories -->
-      <transition name="leaf-transition">
+      <template v-for="(file, index) in fileList">
+        <upload-panel
+          v-bind:key="`upload-${index}`"
+          :fullPath="file.isDirectory ? getFullPath(file.name) : fullPath">
+          <file-item :name="file.name"
+            :isDirectory="file.isDirectory"
+            :open="file.open"
+            @clickitem="onClickItem"
+            @contextmenu="onContextmenu"
+            @rename="onRequestRename"
+            :mode="file.mode"
+             :selected="selectedItemName===getFullPath(file.name)"
+            ></file-item>
+        </upload-panel>
+
         <directory-tree
+          v-if="file.isDirectory"
+          v-show="file.open"
           class="directory"
-          v-for="(subDirectory, index) in subDirectories" :key="index"
+          v-bind:key="`tree-${index}`"
           :env="env"
-          :fullPath="getFullPath(subDirectory)"
+          :fullPath="getFullPath(file.name)"
           :selectedItemName="selectedItemName">
         </directory-tree>
-      </transition>
-
-      <!-- Files -->
-      <upload-panel :fullPath="fullPath">
-        <file-item v-for="(file, index) in fileList"
-          :key="index" :name="file.name"
-          @click="onClickFileItem"
-          @clickitem="onClickFileItem"
-          @contextmenu="onContextmenu"
-          @rename="onRename"
-          :mode="file.mode"
-          :selected="selectedItemName===getFullPath(file.name)"></file-item>
-      </upload-panel>
+      </template>
 
     </div>
 
     <!-- Context menu -->
-    <context-menu ref="ctxMenu" class="context-menu">
+    <context-menu ref="fileCtxMenu" class="context-menu">
       <li @click="onClickContextmenuRename"> rename </li>
       <li @click="onClickContextmenuDelete"> delete </li>
     </context-menu>
@@ -50,7 +42,7 @@
     <context-menu ref="folderCtxMenu" class="context-menu">
       <li @click="onClickContextmenuNewFile"> new file </li>
       <li @click="onClickContextmenuNewFolder"> new folder </li>
-      <li @click="onClickContextmenuRenameFolder"> rename folder </li>
+      <li @click="onClickContextmenuRename"> rename folder </li>
       <li @click="onClickContextmenuDeleteFolder"> delete folder</li>
     </context-menu>
 
@@ -66,7 +58,10 @@ export default {
   name: 'DirectoryTree',
   components: {FileItem, UploadPanel, ContextMenu},
   props: {
-    env: Object,
+    env: {
+      type: Object,
+      required: true
+    },
     fullPath: {
       type: String,
       default: '/'
@@ -78,15 +73,21 @@ export default {
     isRoot: {
       type: Boolean,
       default: false
+    },
+    newFileName: {
+      type: String,
+      default: 'untitled'
+    },
+    newFolderName: {
+      type: String,
+      default: 'untitled'
     }
   },
   data () {
     return {
       open: true,
-      subDirectories: [],
       fileList: [],
       contextMenuTarget: null,
-      folderItemMode: DEFAULT_MODE
     }
   },
   created () {
@@ -100,13 +101,15 @@ export default {
     directory () {
       return this.path.parse(this.fullPath).name || '/'
     },
+    contextMenuTargetFullPath () {
+      return this.getFullPath(this.contextMenuTarget)
+    },
     RENAME_MODE: () => RENAME_MODE
   },
   methods: {
-    toggle () {
-      this.open = !this.open
-    },
     update () {
+      this.fileList = []
+
       this.fs.readdir(this.fullPath, (err, files) => {
         if (err) {
           console.log(err)
@@ -116,60 +119,61 @@ export default {
       })
     },
     fromFiles (files) {
-      var subDirectories = []
-      var fileList = []
-
-      files.filter(fileName => fileName).forEach(fileName => {
+      console.log(files)
+      this.fileList = files.filter(fileName => {
+        return fileName && fileName[0] !== '.'
+      }).map(fileName => {
         var fullPath = this.path.join(this.fullPath, fileName)
         var stats = this.fs.statSync(fullPath)
-        if (stats.isDirectory()) { // folder
-          subDirectories.push(fileName)
-        } else { // file
-          fileList.push({
-            name: fileName,
-            mode: DEFAULT_MODE
-          })
+
+        return {
+          name: fileName,
+          mode: DEFAULT_MODE,
+          isDirectory: stats.isDirectory(),
+          open: true
+        }
+      }).sort((fileA, fileB) => {
+        if (fileA.isDirectory === fileB.isDirectory) {
+          return fileA.name > fileB.name ? 1 : -1
+        } else {
+          return fileA.isDirectory ? -1 : 1
         }
       })
-
-      this.subDirectories = subDirectories
-      this.fileList = fileList
+    },
+    onClickItem (e, fileName, mode, isDirectory) {
+      return isDirectory ? this.onClickFolderItem(e, fileName, mode) : this.onClickFileItem(e, fileName, mode)
     },
     onClickFileItem (e, fileName, mode) {
       if (mode === DEFAULT_MODE) {
         this.$store.dispatch(FILE_OPEN_ACTION, {name: fileName, directoryFullPath: this.fullPath, env: this.env})
       }
     },
-    onClickFolderItem () {
-      this.toggle()
+    onClickFolderItem (e, folderName, mode) {
+      var folderData = this.getFileData(folderName)
+      folderData.open = !folderData.open
     },
-    onContextmenu (e, name) {
+    onContextmenu (e, name, isDirectory) {
+      return isDirectory ? this.onFolderContextmenu(e, name) : this.onFileContextmenu(e, name)
+    },
+    onFileContextmenu (e, name) {
       this.onClickFileItem(e, name, DEFAULT_MODE)
       this.contextMenuTarget = name
-      this.$refs.ctxMenu.open()
+      this.$refs.fileCtxMenu.open()
     },
-    onContextmenuFolder (e, name) {
+    onFolderContextmenu (e, name) {
       this.contextMenuTarget = name
       this.$refs.folderCtxMenu.open()
     },
     onClickContextmenuRename (e) {
-      var filtered = this.fileList.filter((file) => file.name === this.contextMenuTarget)
-
-      if (filtered.length !== 1) {
-        console.warn('something error happened. Cannot rename')
-      }
-
-      filtered[0].mode = RENAME_MODE
-    },
-    onClickContextmenuRenameFolder (e) {
-      this.folderItemMode = RENAME_MODE
+      var fileData = this.getFileData(this.contextMenuTarget)
+      fileData.mode = RENAME_MODE
     },
     onClickContextmenuDelete (e) {
       if (!this.contextMenuTarget) {
-        return false
+        return
       }
 
-      this.fs.unlink(this.getFullPath(this.contextMenuTarget), (err) => {
+      this.fs.unlink(this.contextMenuTargetFullPath, (err) => {
         if (err) {
           console.log(err)
           return
@@ -181,19 +185,26 @@ export default {
       this.contextMenuTarget = null
     },
     onClickContextmenuDeleteFolder (e) {
-      this.fs.rmdir(this.fullPath, (err) => {
+      if (!this.contextMenuTarget) {
+        return
+      }
+
+      this.fs.rmdir(this.contextMenuTargetFullPath, (err) => {
         if (err) {
           console.log(err)
-          return false
+          return
         }
 
         this.update()
       })
+
+      this.contextMenuTarget = null
     },
     onClickContextmenuNewFile (e) {
       const fileName = 'untitled'
-
-      this.fs.writeFile(this.getFullPath(fileName), '', (err) => {
+      const filePath = this.path.join(this.contextMenuTargetFullPath, fileName)
+      console.log(filePath)
+      this.fs.writeFile(filePath, '', (err) => {
         if (err) {
           console.log(err)
           return false
@@ -205,7 +216,7 @@ export default {
     onClickContextmenuNewFolder (e) {
       var directoryName = 'new'
 
-      this.fs.mkdir(this.getFullPath(directoryName), 0o777, (err) => {
+      this.fs.mkdir(this.path.join(this.contextMenuTargetFullPath, directoryName), 0o777, (err) => {
         if (err) {
           console.log(err)
           return false
@@ -214,7 +225,10 @@ export default {
         this.update()
       })
     },
-    onRename (e, oldName, newName) {
+    onRequestRename (e, oldName, newName, isDirectory) {
+      return isDirectory ? this.renameFolder(oldName, newName) : this.renameFile(oldName, newName)
+    },
+    renameFile (oldName, newName) {
       this.fs.rename(this.getFullPath(oldName), this.getFullPath(newName), (err) => {
         if (err) {
           console.log(err)
@@ -224,9 +238,8 @@ export default {
         this.update()
       })
     },
-    onRenameFolder (e, oldName, newName) {
-      var newPath = this.path.join(this.path.parse(this.fullPath).dir, newName)
-      this.fs.rename(this.fullPath, newPath, (err) => {
+    renameFolder (oldName, newName) {
+      this.fs.rename(this.getFullPath(oldName), this.getFullPath(newName), (err) => {
         if (err) {
           console.log(err)
           return false
@@ -240,6 +253,15 @@ export default {
     },
     getFileItemMode (fileName) {
       return fileName === this.selectedItemName ? RENAME_MODE : DEFAULT_MODE
+    },
+    getFileData (name) {
+      var filtered = this.fileList.filter((file) => file.name === name)
+
+      if (filtered.length !== 1) {
+        console.warn('Something error happened.')
+      }
+
+      return filtered[0]
     }
   }
 }
