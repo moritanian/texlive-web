@@ -1,4 +1,5 @@
 import mime from 'mime'
+import axios from 'axios'
 
 // https://www.hos.co.jp/blog/20170213/
 /**
@@ -31,8 +32,9 @@ function toBlob (base64, mimeCtype) {
 
 function bufferToBase64 (buffer, mimeCtype) {
   var base64 = new Buffer(buffer, 'binary').toString('base64')
+
   var prefix = ''
-  if (!base64.match(/^data/)) {
+  if (!base64.match(/^data/) && mimeCtype) {
     prefix = `data:${mimeCtype};base64,`
   }
   console.log('prefix', prefix)
@@ -70,4 +72,11 @@ function nameToMime (name) {
   return mime.getType(ext)
 }
 
-export {toBlob, bufferToBase64, stringToBuffer, utf8ToBase64, base64ToUtf8, getFileExtension, isImageFile, nameToMime}
+function loadCORSImageURI (src, omitHeader, width, height) {
+  const corsApiUrl = 'https://cors-anywhere.herokuapp.com/'
+  return axios.get(corsApiUrl + src, {responseType: 'arraybuffer'}).then((res) => {
+    return bufferToBase64(res.data)
+  })
+}
+
+export {toBlob, bufferToBase64, stringToBuffer, utf8ToBase64, base64ToUtf8, getFileExtension, isImageFile, nameToMime, loadCORSImageURI}

@@ -8,7 +8,9 @@
   </div>
 </template>
 <script>
-import {bufferToBase64, isImageFile} from './../util/util'
+import {bufferToBase64, utf8ToBase64, isImageFile, loadCORSImageURI} from './../util/util'
+import axios from 'axios'
+const util = require('util')
 
 export default {
   name: 'UploadPanel',
@@ -42,17 +44,41 @@ export default {
       var i, file
       if (e.dataTransfer.items) {
         for (i = 0; i < e.dataTransfer.items.length; i++) {
-          console.log(e.dataTransfer.items[i].kind)
-          var item = e.dataTransfer.items[i].webkitGetAsEntry()
-          if (item) {
-            this.traverseFileTree(item)
+          let item = e.dataTransfer.items[i]
+          let kind = item.kind
+          let type = item.type
+          console.log(kind, type)
+          let entryItem = e.dataTransfer.items[i].webkitGetAsEntry()
+
+          if (entryItem) {
+            this.traverseFileTree(entryItem)
             return
           }
 
           // If dropped items aren't files, reject them
-          if (e.dataTransfer.items[i].kind === 'file') {
-            file = e.dataTransfer.items[i].getAsFile()
+          if (item === 'file') {
+            file = item.getAsFile()
             this.loadFile(file)
+          } else if (kind === 'string') {
+            var result = e.dataTransfer.items[i].getAsString((url) => {
+              console.log(url)
+              if (type === 'text/uri-list') {
+                var fileName = this.path.parse(url).base.replace(/\?.*$/, '')
+                loadCORSImageURI(url, true).then((base64) => {
+                  this.fs.writeFile(this.path.join(this.fullPath, fileName), base64, 'base64', (err) => {
+                    if (err) {
+                      console.log(err)
+                      return
+                    }
+
+                    this.$emit('uploaded', file)
+                  })
+                }).catch((err) => {
+                  console.log(err)
+                })
+              }
+            })
+            console.log(result)
           }
         }
       } else {
@@ -94,7 +120,7 @@ export default {
       // directoryFullPath: this.fullPath, file: file
       importFile(file).then((result) => {
         if (isImageFile(file.name)) {
-          this.fs.writeFile(path.join(this.fullPath, path, file.name), result.replace(/^data:image\/.*;base64,/, ''), 'base64', (err) => {
+          this.fs.writeFile(this.path.join(this.fullPath, path, file.name), result.replace(/^data:image\/.*;base64,/, ''), 'base64', (err) => {
             if (err) {
               console.log(err)
               return
