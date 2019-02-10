@@ -5,7 +5,7 @@
     </split-area>
     <split-area :size="33" :minSize="10">
       <editor editorId="editor-1" class="editor" v-show="visibleEditor"/>
-      <image-viewer :base64="imageViewerBase64" class="image-viewer" v-show="visibleImageViewer"></image-viewer>
+      <image-viewer :base64="imageViewerBase64" :name="selectedItemName" class="image-viewer" v-show="visibleImageViewer"></image-viewer>
     </split-area>
     <split-area class="pdf-content" :size="52" :minSize="10">
       <ul class="pdf-operations">
@@ -67,6 +67,7 @@ export default {
     ...mapState({
       visibleImageViewer: state => state.editPage.visibleImageViewer,
       imageViewerBase64: state => state.editPage.imageViewerBase64,
+      selectedItemName: state => state.editPage.selectedItemName,
       visibleTexOutput: state => state.editPage.visibleTexOutput,
       pdfScalePercent: state => state.editPage.pdfScalePercent,
       pdfDataURI: state => state.editPage.pdfDataURI,
