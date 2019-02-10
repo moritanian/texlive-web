@@ -1,64 +1,153 @@
 <template>
   <div class="upload-panel">
-    <div class="drop" @dragleave.prevent @dragover.prevent @drop.prevent="onDrop">
+    <div class="drop" :class="{dragging:dragging}"
+      @dragleave.prevent="onDragLeave" @dragover.prevent @drop.prevent="onDrop"
+      @dragover.exact="onDragOver">
       <slot></slot>
     </div>
   </div>
 </template>
 <script>
-import { FILE_UPLOADED_ACTION } from '../store/modules/file_system'
+import {bufferToBase64, isImageFile} from './../util/util'
 
 export default {
   name: 'UploadPanel',
   props: {
+    env: {
+      type: Object,
+      required: true
+    },
     fullPath: {
       type: String,
       default: '/'
     },
-    onUpload: Function
   },
   data () {
     return {
+      dragging: false,
     }
   },
   computed: {
   },
+  mounted () {
+    this.fs = this.env.require('fs')
+    this.path = this.env.require('path')
+  },
   methods: {
     onDrop (e) {
       e.preventDefault()
+      e.stopPropagation()
+      this.dragging = false
+
       var i, file
       if (e.dataTransfer.items) {
         for (i = 0; i < e.dataTransfer.items.length; i++) {
+          console.log(e.dataTransfer.items[i].kind)
+          var item = e.dataTransfer.items[i].webkitGetAsEntry()
+          if (item) {
+            this.traverseFileTree(item)
+            return
+          }
+
           // If dropped items aren't files, reject them
           if (e.dataTransfer.items[i].kind === 'file') {
             file = e.dataTransfer.items[i].getAsFile()
-            this.importFile(file)
+            this.loadFile(file)
           }
         }
       } else {
         // Use DataTransfer interface to access the file(s)
         for (i = 0; i < e.dataTransfer.files.length; i++) {
           file = e.dataTransfer.files[i]
-          this.importFile(file)
+          this.loadFile(file)
         }
       }
     },
-    importFile (file) {
-      this.$store.dispatch(FILE_UPLOADED_ACTION, {
-        directoryFullPath: this.fullPath, file: file
-      }).then((e) => {
-        this.onUpload(e)
+    traverseFileTree (item, path = '') {
+      if (item.isFile) {
+        // Get file
+        item.file((file) => {
+          this.loadFile(file, path)
+        })
+      } else if (item.isDirectory) {
+        this.fs.mkdir(this.path.join(this.fullPath, path, item.name), (err) => {
+          console.log(err)
+        })
+
+        // Get folder contents
+        var dirReader = item.createReader()
+        dirReader.readEntries((entries) => {
+          for (var i = 0; i < entries.length; i++) {
+            this.traverseFileTree(entries[i], path + item.name + '/')
+          }
+        })
+      }
+    },
+    onDragOver (e) {
+      e.stopPropagation()
+      this.dragging = true
+    },
+    onDragLeave (e) {
+      this.dragging = false
+    },
+    loadFile (file, path = '') {
+      // directoryFullPath: this.fullPath, file: file
+      importFile(file).then((result) => {
+        if (isImageFile(file.name)) {
+          this.fs.writeFile(path.join(this.fullPath, path, file.name), result.replace(/^data:image\/.*;base64,/, ''), 'base64', (err) => {
+            if (err) {
+              console.log(err)
+              return
+            }
+
+            this.$emit('uploaded', file)
+          })
+        } else {
+          this.fs.writeFile(this.path.join(this.fullPath, path, file.name), result, (err) => {
+            if (err) {
+              console.log(err)
+              return
+            }
+
+            this.$emit('uploaded', file)
+          })
+        }
       })
+
+      function importFile (file) {
+        if (isImageFile(file.name)) {
+          return importImageFile(file)
+        } else {
+          return importTextFile(file)
+        }
+      }
+
+      function importImageFile (file) {
+        var reader = new FileReader()
+        return new Promise((resolve, reject) => {
+          reader.onload = (e) => {
+            resolve(e.target.result)
+          }
+          reader.readAsDataURL(file)
+        })
+      }
+
+      function importTextFile (file) {
+        var reader = new FileReader()
+        return new Promise((resolve, reject) => {
+          reader.onload = (e) => {
+            resolve(e.target.result)
+          }
+          reader.readAsText(file)
+        })
+      }
     }
-  },
-  onUpload (e) {
-    // this.$store.dispatch(FILE_UPLOADED_ACTION, {
   }
 }
 
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .upload-panel {
   width: 100%;
   height: 100%;
@@ -67,5 +156,10 @@ export default {
 .drop {
   width: 100%;
   height: 100%;
+
+  &.dragging {
+    cursor: crosshair;
+    background-color: rgb(216, 199, 199) ;
+  }
 }
 </style>

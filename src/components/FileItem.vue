@@ -2,7 +2,8 @@
   <div class="file-item"
     @click="onClick"
     @contextmenu.prevent="onContextmenu"
-    :class="{selected: selected}">
+    :class="{selected: selected}"
+    :title="fullPath || name">
     <div class="icon">
       <img width="30" height="30" :src="fileIconUrl" :alt="name">
     </div>
@@ -12,6 +13,7 @@
       :value="name" @input="onChangeInput"
       v-on:keyup.enter="onEnterInput"
       v-focus="mode===RENAME_MODE">
+    <div class="notification" v-if="notification">{{notification}}</div>
   </div>
 </template>
 <script>
@@ -33,6 +35,9 @@ export default {
       type: String,
       required: true,
     },
+    fullPath: {
+      type: String,
+    },
     mode: {
       type: String,
       default: DEFAULT_MODE
@@ -48,11 +53,15 @@ export default {
     open: {
       type: Boolean,
       default: false
+    },
+    notification: {
+      type: String,
+      default: ''
     }
   },
   data () {
     return {
-      nameInputValue: ''
+      nameInputValue: this.name
     }
   },
   computed: {
@@ -78,7 +87,6 @@ export default {
   },
   methods: {
     onClick (e) {
-      console.log('click')
       this.$emit('clickitem', e, this.name, this.mode, this.isDirectory)
     },
     onContextmenu (e) {
@@ -137,9 +145,10 @@ export default {
   }
 
   .name-text {
-    cursor: default;
+    cursor: inherit;
     text-align: left;
     margin-left: 25px;
+    white-space: nowrap;
   }
 
   .name-text-input {
@@ -156,6 +165,20 @@ export default {
 
   &after {
    clear: both;
+  }
+
+  .notification {
+    background-color: #920000;
+    color: white;
+    z-index: 1000;
+    font-size: 11px;
+    position: absolute;
+    left: 0;
+    text-align: left;
+    padding: 1px 7px;
+    width: 100%;
+    box-shadow: #b65151a6 1px 1px 1px;
+    border-radius: 1px;
   }
 }
 

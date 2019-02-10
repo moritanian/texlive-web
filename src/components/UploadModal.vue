@@ -3,7 +3,7 @@
     <div class="close-button" @click="onClickClose">
       <img width="30" height="30" :src="closeIconUrl" alt="upload">
     </div>
-    <upload-panel directory="/" :onUpload="onUpload">
+    <upload-panel :env="env" directory="/" @uploaded="onUpload">
       <input @change="onInputFile" type="file" name="file">
       <div class="drop-area">
         Drop here!!
@@ -19,6 +19,10 @@ export default {
   name: 'UploadModal',
   components: {UploadPanel},
   props: {
+    env: {
+      type: Object,
+      required: true
+    },
     directory: {
       type: String,
       default: '/'

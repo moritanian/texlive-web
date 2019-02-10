@@ -56,6 +56,7 @@ async function initFileSystem () {
     console.log(err)
   })
   */
+  
 }
 
 initFileSystem()
@@ -75,54 +76,6 @@ const mutations = {
 }
 
 const actions = {
-  [FILE_UPLOADED_ACTION] ({state}, {directoryFullPath, file}) {
-    console.log(file)
-    importFile(file).then((result) => {
-      // console.log(result)
-      var fs = state.env.require('fs')
-      var path = state.env.require('path')
-      console.log(result)
-      console.log(path.join(directoryFullPath, file.name))
-
-      if (isImageFile(name)) {
-        fs.writeFile(path.join(directoryFullPath, file.name), result, 'base64', (e) => {
-          console.log(e)
-        })
-      } else {
-        fs.writeFile(path.join(directoryFullPath, file.name), result, (e) => {
-          console.log(e)
-        })
-      }
-    })
-
-    function importFile (file) {
-      if (isImageFile(file.name)) {
-        return importImageFile(file)
-      } else {
-        return importTextFile(file)
-      }
-    }
-
-    function importImageFile (file) {
-      var reader = new FileReader()
-      return new Promise((resolve, reject) => {
-        reader.onload = (e) => {
-          resolve(e.target.result)
-        }
-        reader.readAsDataURL(file)
-      })
-    }
-
-    function importTextFile (file) {
-      var reader = new FileReader()
-      return new Promise((resolve, reject) => {
-        reader.onload = (e) => {
-          resolve(e.target.result)
-        }
-        reader.readAsText(file)
-      })
-    }
-  }
 }
 
 export default {

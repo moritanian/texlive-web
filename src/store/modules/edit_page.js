@@ -119,11 +119,24 @@ async function prepareFile (pdftex) {
 */
   // console.log('set vue png')
 
+
+  /*
+   * prepare default tex file
+   */
+  const DEFAULT_TEX_FILE = '/static/demo/main.tex'
+  var res = await axios.get(DEFAULT_TEX_FILE)
+  /*
+  fs.writeFile(state.targetTexFile, res.data, (err) => {
+    console.log(err)
+  })
+  */
+  // state.content = res.data
+
   /* eslint-enable */
 }
 
 const state = {
-  fileName: 'main.tex',
+  targetTexFile: 'main.tex',
   content: '',
   selectedItemName: '',
   lang: 'tex',
@@ -231,16 +244,28 @@ const actions = {
       commit(COMPILE_FAILED_MUTATION, e)
     })
   },
-  [CONTENT_SAVE_ACTION] ({state, getters}) {
-    localStorage.setItem(STORAGE_KEY, getters.serializedFileInfo)
+  [CONTENT_SAVE_ACTION] ({state, rootState, getters}) {
+    var fs = rootState.fileSystem.env.require('fs')
+    fs.writeFile(state.selectedItemName, state.content, (err) => {
+      if (err) {
+        console.log(err)
+        return false
+      }
+    })
+    // localStorage.setItem(STORAGE_KEY, getters.serializedFileInfo)
   },
-  async [CONTENT_LOAD_ACTION] ({state, commit, getters}) {
-    var infoStr = localStorage.getItem(STORAGE_KEY)
+  async [CONTENT_LOAD_ACTION] ({state, commit, getters, rootState}) {
+    var fs = rootState.fileSystem.env.require('fs')
+    fs.readFile(state.targetTexFile, state.content, (err) => {
+      if (err) {
+        console.log(err)
+        return false
+      }
+    })
+
 
     if (!infoStr) {
-      const DEFAULT_TEX_FILE = '/static/demo/main.tex'
-      var res = await axios.get(DEFAULT_TEX_FILE)
-      state.content = res.data
+     
       infoStr = getters.serializedFileInfo
     }
 
@@ -251,32 +276,32 @@ const actions = {
   [FILE_OPEN_ACTION] ({state}, {name, directoryFullPath, env}) {
     var path = env.require('path')
     var fs = env.require('fs')
-    state.selectedItemName = path.join(directoryFullPath, name)
     console.log(state)
-    fs.readFile(path.join(directoryFullPath, name), (err, content) => {
-      if (err) {
-        console.log(err)
-        return
-      }
+    console.log(directoryFullPath, name)
 
-      if (isImageFile(name)) {
-        state.visibleImageViewer = true
-        state.imageViewerBase64 = bufferToBase64(content, nameToMime(name))
-      } else {
-        state.visibleImageViewer = false
-        state.content = content.toString()
-      }
+    return new Promise((resolve, reject) => {
+      fs.readFile(path.join(directoryFullPath, name), (err, content) => {
+        if (err) {
+          console.log(err)
+          return reject(err)
+        }
+
+        if (isImageFile(name)) {
+          state.visibleImageViewer = true
+          state.imageViewerBase64 = bufferToBase64(content, nameToMime(name))
+        } else {
+          state.visibleImageViewer = false
+          state.content = content.toString()
+        }
+
+        state.selectedItemName = path.join(directoryFullPath, name)
+        resolve(name)
+      })
     })
   }
 }
 
 const getters = {
-  serializedFileInfo: state => {
-    return JSON.stringify({
-      fileName: state.fileName,
-      content: state.content
-    })
-  },
   pdfScale: state => state.pdfScalePercent / 100,
   pdftexOutputErrorCount: state => {
     return state.pdftexOutputList.filter((output) => {

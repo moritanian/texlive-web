@@ -9,8 +9,11 @@ import {
 } from '../store/modules/edit_page'
 import * as ace from 'brace'
 import 'brace/mode/javascript'
+import 'brace/mode/json'
+import 'brace/mode/html'
 import 'brace/mode/tex'
 import 'brace/mode/text'
+import 'brace/mode/markdown'
 import 'brace/theme/monokai'
 import {getFileExtension} from './../util/util'
 
@@ -20,7 +23,9 @@ const EXTENSION_LANG_TABLE = {
   'txt': 'text',
   'md': 'markdown',
   'css': 'css',
-  'json': 'json'
+  'json': 'json',
+  'html': 'html',
+  'vue': 'html'
 }
 
 export default {
@@ -62,21 +67,21 @@ export default {
     ])
 
     this.editor.$blockScrolling = Infinity
-
+  /*
     this.$store.dispatch(CONTENT_LOAD_ACTION).then(() => {
       this.editor.setValue(this.content, -1)
       this.$store.dispatch(COMPILE_ACTION)
     })
+  */
   },
   watch: {
-    content: {
+    selectedItemName: {
       handler () {
         var ext = getFileExtension(this.selectedItemName)
         var lang = EXTENSION_LANG_TABLE[ext]
         if (!lang) {
           lang = EXTENSION_LANG_TABLE.txt
         }
-        lang = 'javascript'
         this.editor.getSession().setMode(`ace/mode/${lang}`)
         this.editor.setValue(this.content, -1)
       }

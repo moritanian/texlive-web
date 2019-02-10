@@ -31,7 +31,11 @@ function toBlob (base64, mimeCtype) {
 
 function bufferToBase64 (buffer, mimeCtype) {
   var base64 = new Buffer(buffer, 'binary').toString('base64')
-  var prefix = `data:${mimeCtype};base64,`
+  var prefix = ''
+  if (!base64.match(/^data/)) {
+    prefix = `data:${mimeCtype};base64,`
+  }
+  console.log('prefix', prefix)
   return prefix + base64
 }
 

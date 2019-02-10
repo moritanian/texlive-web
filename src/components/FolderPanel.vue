@@ -4,26 +4,31 @@
       <img width="30" height="30" :src="uploadIconUrl" alt="upload">
     </span>
     <transition name="fade">
-      <upload-modal id="upload-modal" v-show="visibleUploadModal"></upload-modal>
+      <upload-modal id="upload-modal" :env="env" v-show="visibleUploadModal"></upload-modal>
     </transition>
     <div class="dirs-area">
-      <directory-tree
-        :isRoot="false"
-        :env="env"
-        fullPath="/"
-        :selectedItemName="selectedItemName"></directory-tree>
+      <upload-panel :env="env" class="root-upload-panel" @uploaded="uploadedInRootPanel">
+        <directory-tree
+          ref="rootTree"
+          :isRoot="false"
+          :env="env"
+          fullPath="/"
+          :selectedItemName="selectedItemName"
+          :excludes="[/^\.hoge/, /\.config$/]"></directory-tree>
+      </upload-panel>
     </div>
   </div>
 </template>
 <script>
 import UploadModal from '../components/UploadModal.vue'
+import UploadPanel from '../components/UploadPanel.vue'
 import DirectoryTree from '../components/DirectoryTree.vue'
 import { mapState } from 'vuex'
 import { UPLOAD_MODAL_OPEN_BUTTON_CLICKED } from '../store/modules/file_system'
 
 export default {
   name: 'FolderPanel',
-  components: {UploadModal, DirectoryTree},
+  components: {UploadModal, UploadPanel, DirectoryTree},
   data () {
     return {
       uploadIconUrl: require('./../assets/upload-icon.svg')
@@ -39,40 +44,52 @@ export default {
   methods: {
     onClickUpload (e) {
       this.$store.commit(UPLOAD_MODAL_OPEN_BUTTON_CLICKED)
+    },
+    uploadedInRootPanel () {
+      this.$refs.rootTree.update(true)
     }
   }
 }
 
 </script>
 
-<style scoped>
-#upload-modal {
-  position: absolute;
-  width: 80%;
-  height: 80%;
-  right: 0;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  margin: auto;
-}
+<style scoped lang='scss'>
+.folder-panel {
+  height: 100%;
 
-.upload-button {
-  display: inline-block;
-}
+  #upload-modal {
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    right: 0;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+  }
 
-.dirs-area {
-  border-top: solid 1px #6b6b6b;
-  margin-top: 2px;
-  padding-top: 5px;
-  font-family: serif;
+  .upload-button {
+    display: inline-block;
+  }
+
+  .dirs-area {
+    border-top: solid 1px #6b6b6b;
+    margin-top: 2px;
+    padding-top: 5px;
+    font-family: serif;
+    height: calc(100% - 45px);
+
+    .root-upload-panel {
+      height: 100%;
+    }
+  }
 }
 
 .fade-enter-active {
-    transition: opacity 1000ms ease-out;
+    transition: opacity 500ms ease-out;
 }
 .fade-eave-active {
-    transition: opacity 100ms ease-in;
+    transition: opacity 1000ms ease-in;
 }
 
 .fade-enter,

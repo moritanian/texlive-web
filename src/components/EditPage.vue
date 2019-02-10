@@ -102,7 +102,7 @@ export default {
     var path = this.env.require('path')
     var parsed = path.parse(this.targetTexFile)
     this.$store.dispatch(
-      FILE_OPEN_ACTION, {name: parsed.name, directoryFullPath: parsed.dir, env: this.env}
+      FILE_OPEN_ACTION, {name: parsed.base, directoryFullPath: parsed.dir, env: this.env}
     ).then(() => {
       this.$store.dispatch(COMPILE_ACTION)
     })
