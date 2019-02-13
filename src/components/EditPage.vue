@@ -100,13 +100,7 @@ export default {
     }
   },
   mounted () {
-    var path = this.env.require('path')
-    var parsed = path.parse(this.targetTexFile)
-    this.$store.dispatch(
-      FILE_OPEN_ACTION, {name: parsed.base, directoryFullPath: parsed.dir, env: this.env}
-    ).then(() => {
-      this.$store.dispatch(COMPILE_ACTION)
-    })
+   
   },
   methods: {
     onClickZoomIn () {
@@ -127,6 +121,22 @@ export default {
       var value = parseInt(e.target.value)
       if (!isNaN(value)) {
         this.currentPageInput = value
+      }
+    }
+  },
+  watch: {
+    env: {
+      handler () {
+        if (this.env) {
+          this.fs = this.env.require('fs')
+          var path = this.env.require('path')
+          var parsed = path.parse(this.targetTexFile)
+          this.$store.dispatch(
+            FILE_OPEN_ACTION, {name: parsed.base, directoryFullPath: parsed.dir, env: this.env}
+          ).then(() => {
+            this.$store.dispatch(COMPILE_ACTION)
+          })
+        }
       }
     }
   }
@@ -262,9 +272,6 @@ ul.pdf-operations {
   width: 30px;
   height: $op-height;
   font-weight: bold;
-
-  &.zoom-in-button {
-  }
 
   img {
     width: 24px;

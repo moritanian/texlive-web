@@ -54,19 +54,17 @@
   </div>
 </template>
 <script>
-import UploadPanel from '../components/UploadPanel.vue'
+import UploadPanel from './UploadPanel.vue'
 import FileItem, {DEFAULT_MODE, RENAME_MODE} from '../components/FileItem.vue'
 import { FILE_OPEN_ACTION } from '../store/modules/file_system'
 import ContextMenu from 'vue-context-menu'
+import FileOperationable from '../mixins/FileOperationable'
 
 export default {
   name: 'DirectoryTree',
   components: {FileItem, UploadPanel, ContextMenu},
+  mixins: [FileOperationable],
   props: {
-    env: {
-      type: Object,
-      required: true
-    },
     fullPath: {
       type: String,
       default: '/'
@@ -98,13 +96,6 @@ export default {
       fileList: [],
       contextMenuTarget: null,
     }
-  },
-  created () {
-    this.fs = this.env.require('fs')
-    this.path = this.env.require('path')
-  },
-  mounted () {
-    this.update()
   },
   computed: {
     directory () {
@@ -149,6 +140,7 @@ export default {
           return fileA.isDirectory ? -1 : 1
         }
       })
+      console.log(fileList, this.fullPath)
 
       // update list and notify it to the vue system
       this.fileList.splice(0, this.fileList.length, ...fileList)
@@ -274,6 +266,7 @@ export default {
         fileName = `${this.newFileName}${count}`
         count++
       }
+
       const filePath = this.path.join(this.contextMenuTargetFullPath, fileName)
 
       this.fs.writeFile(filePath, '', (err) => {

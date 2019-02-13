@@ -17,7 +17,7 @@ export default {
   width: 100%;
   height: 100%;
   background-color: #00000038;
-  z-index: 100;
+  z-index: 10;
 }
 .loading-image {
   width: 27px;

@@ -9,11 +9,13 @@
 </template>
 <script>
 import {bufferToBase64, utf8ToBase64, isImageFile, loadCORSImageURI} from './../util/util'
+import FileOperationable from '../mixins/FileOperationable'
 import axios from 'axios'
 const util = require('util')
 
 export default {
   name: 'UploadPanel',
+  mixins: [FileOperationable],
   props: {
     env: {
       type: Object,
@@ -30,10 +32,6 @@ export default {
     }
   },
   computed: {
-  },
-  mounted () {
-    this.fs = this.env.require('fs')
-    this.path = this.env.require('path')
   },
   methods: {
     onDrop (e) {
@@ -65,6 +63,7 @@ export default {
               if (type === 'text/uri-list') {
                 var fileName = this.path.parse(url).base.replace(/\?.*$/, '')
                 loadCORSImageURI(url, true).then((base64) => {
+                  // this.writeFile()
                   this.fs.writeFile(this.path.join(this.fullPath, fileName), base64, 'base64', (err) => {
                     if (err) {
                       console.log(err)
@@ -117,26 +116,13 @@ export default {
       this.dragging = false
     },
     loadFile (file, path = '') {
+      console.log('loadfile', file.name, this.fullPath)
       // directoryFullPath: this.fullPath, file: file
       importFile(file).then((result) => {
         if (isImageFile(file.name)) {
-          this.fs.writeFile(this.path.join(this.fullPath, path, file.name), result.replace(/^data:image\/.*;base64,/, ''), 'base64', (err) => {
-            if (err) {
-              console.log(err)
-              return
-            }
-
-            this.$emit('uploaded', file)
-          })
+          this.writeFile(path, file, result.replace(/^data:image\/.*;base64,/, ''), 'base64')
         } else {
-          this.fs.writeFile(this.path.join(this.fullPath, path, file.name), result, (err) => {
-            if (err) {
-              console.log(err)
-              return
-            }
-
-            this.$emit('uploaded', file)
-          })
+          this.writeFile(path, file, result)
         }
       })
 
@@ -167,6 +153,16 @@ export default {
           reader.readAsText(file)
         })
       }
+    },
+    writeFile (path, file, data, type = undefined) {
+      this.fs.writeFile(this.path.join(this.fullPath, path, file.name), data, type, (err) => {
+        if (err) {
+          console.log(err)
+          return
+        }
+
+        this.$emit('uploaded', file)
+      })
     }
   }
 }

@@ -172,7 +172,7 @@ var PDFTeX = function (optWorkerPath) {
     }
 
     var getPDF = function () {
-      console.log(arguments)
+      // console.log(arguments)
       return self.FS_readFile('/input.pdf')
     }
 

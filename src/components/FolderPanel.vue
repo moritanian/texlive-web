@@ -4,17 +4,17 @@
       <img width="30" height="30" :src="uploadIconUrl" alt="upload">
     </span>
     <transition name="fade">
-      <upload-modal id="upload-modal" :env="env" v-show="visibleUploadModal"></upload-modal>
+      <upload-modal id="upload-modal" :env="env" :fullPath="basePath" v-show="visibleUploadModal"></upload-modal>
     </transition>
     <div class="dirs-area">
-      <upload-panel :env="env" class="root-upload-panel" @uploaded="uploadedInRootPanel">
+      <upload-panel :env="env" :fullPath="basePath" class="root-upload-panel" @uploaded="uploadedInRootPanel">
         <directory-tree
           ref="rootTree"
           :isRoot="false"
           :env="env"
-          fullPath="/"
+          :fullPath="basePath"
           :selectedItemName="selectedItemName"
-          :excludes="[/^\.hoge/, /\.config$/]"></directory-tree>
+          :excludes="[/^\.hoge/, /\.config$/, /.*__MACOSX/]"></directory-tree>
       </upload-panel>
     </div>
   </div>
@@ -31,7 +31,8 @@ export default {
   components: {UploadModal, UploadPanel, DirectoryTree},
   data () {
     return {
-      uploadIconUrl: require('./../assets/upload-icon.svg')
+      uploadIconUrl: require('./../assets/upload-icon.svg'),
+      basePath: '/workspace/'
     }
   },
   computed: {

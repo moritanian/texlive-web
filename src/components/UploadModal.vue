@@ -3,7 +3,7 @@
     <div class="close-button" @click="onClickClose">
       <img width="30" height="30" :src="closeIconUrl" alt="upload">
     </div>
-    <upload-panel :env="env" directory="/" @uploaded="onUpload">
+    <upload-panel :env="env" :full-path="fullPath" @uploaded="onUpload" ref="uploadPanel">
       <input @change="onInputFile" type="file" name="file">
       <div class="drop-area">
         Drop here!!
@@ -23,7 +23,7 @@ export default {
       type: Object,
       required: true
     },
-    directory: {
+    fullPath: {
       type: String,
       default: '/'
     }
@@ -41,7 +41,8 @@ export default {
       var files = e.target.files
       var tasks = []
       for (var i = 0; i < files.length; i++) {
-        tasks.push(this.$store.dispatch(FILE_UPLOADED_ACTION, {directory: '/', file: files[i]}))
+        this.$refs.uploadPanel.loadFile(files[i])
+        // tasks.push(this.$store.dispatch(FILE_UPLOADED_ACTION, {directory: '/', file: files[i]}))
       }
       Promise.all(tasks).then(e => {
         this.onUpload()
