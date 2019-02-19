@@ -14,6 +14,7 @@
             :isDirectory="file.isDirectory"
             :open="file.open"
             @clickitem="onClickItem"
+            @dblclickitem="onClickContextmenuRename"
             @contextmenu="onContextmenu"
             @rename="onRequestRename"
             :mode="file.mode"
@@ -30,7 +31,8 @@
           v-bind:key="`tree-${index}`"
           :env="env"
           :fullPath="getFullPath(file.name)"
-          :selectedItemName="selectedItemName">
+          :selectedItemName="selectedItemName"
+          @open="onOpen">
         </directory-tree>
       </template>
 
@@ -39,15 +41,17 @@
     <!-- Context menu -->
     <context-menu ref="fileCtxMenu" class="context-menu">
       <li @click="onClickContextmenuRename"> rename </li>
-      <li @click="onClickContextmenuDelete"> delete </li>
+      <li @click="onClickContextmenuDuplicate"> duplicate </li>
+      <li @click="onClickContextmenuCopyPath"> copy path </li>
+      <li @click="onClickContextmenuDelete" class="new-group"> delete </li>
     </context-menu>
 
      <!-- Folder context menu -->
     <context-menu ref="folderCtxMenu" class="context-menu">
       <li @click="onClickContextmenuNewFile"> new file </li>
       <li @click="onClickContextmenuNewFolder"> new folder </li>
-      <li @click="onClickContextmenuRename" style="border-top: solid #a0a0a0 1px"> rename folder </li>
-      <li @click="onClickContextmenuDeleteFolder" style="border-top: solid #a0a0a0 1px"> delete folder</li>
+      <li @click="onClickContextmenuRename" class="new-group"> rename folder </li>
+      <li @click="onClickContextmenuDeleteFolder" class="new-group"> delete folder</li>
       <li @click="onClickContextmenuDeleteFolderRecursive"> delete folder recursive</li>
     </context-menu>
 
@@ -56,7 +60,7 @@
 <script>
 import UploadPanel from './UploadPanel.vue'
 import FileItem, {DEFAULT_MODE, RENAME_MODE} from '../components/FileItem.vue'
-import { FILE_OPEN_ACTION } from '../store/modules/file_system'
+import { FILE_OPEN_ACTION, FOLDER_OPEN_ACTION } from '../store/modules/file_system'
 import ContextMenu from 'vue-context-menu'
 import FileOperationable from '../mixins/FileOperationable'
 
@@ -88,11 +92,13 @@ export default {
     newFolderName: {
       type: String,
       default: 'untitled'
+    },
+    directoryTreeInfo: {
+      type: Object
     }
   },
   data () {
     return {
-      open: true,
       fileList: [],
       contextMenuTarget: null,
     }
@@ -121,41 +127,55 @@ export default {
       })
     },
     fromFiles (files) {
-      var fileList = files.filter(fileName => {
+      console.log(files, this.fullPath)
+
+      var promises = files.filter(fileName => {
         return fileName && this.excludes.filter(exclude => fileName.match(exclude)).length === 0
       }).map(fileName => {
         var fullPath = this.path.join(this.fullPath, fileName)
-        var stats = this.fs.statSync(fullPath)
 
-        return {
-          name: fileName,
-          mode: DEFAULT_MODE,
-          isDirectory: stats.isDirectory(),
-          open: true
-        }
-      }).sort((fileA, fileB) => {
-        if (fileA.isDirectory === fileB.isDirectory) {
-          return fileA.name > fileB.name ? 1 : -1
-        } else {
-          return fileA.isDirectory ? -1 : 1
-        }
+        return new Promise((resolve, reject) => {
+          this.fs.stat(fullPath, (err, stats) => {
+            if (err) {
+              return reject(err)
+            }
+            resolve({
+              name: fileName,
+              mode: DEFAULT_MODE,
+              isDirectory: stats.isDirectory(),
+              open: this.directoryTreeInfo &&
+                this.directoryTreeInfo[this.getFullPath(fileName)] &&
+                this.directoryTreeInfo[this.getFullPath(fileName)].open
+            })
+          })
+        })
       })
-      console.log(fileList, this.fullPath)
 
-      // update list and notify it to the vue system
-      this.fileList.splice(0, this.fileList.length, ...fileList)
+      Promise.all(promises).then((fileInfoList) => {
+        fileInfoList = fileInfoList.sort((fileA, fileB) => {
+          if (fileA.isDirectory === fileB.isDirectory) {
+            return fileA.name > fileB.name ? 1 : -1
+          } else {
+            return fileA.isDirectory ? -1 : 1
+          }
+        })
+        // update list and notify it to the vue system
+        this.fileList.splice(0, this.fileList.length, ...fileInfoList)
+      })
     },
     onClickItem (e, fileName, mode, isDirectory) {
       return isDirectory ? this.onClickFolderItem(e, fileName, mode) : this.onClickFileItem(e, fileName, mode)
     },
     onClickFileItem (e, fileName, mode) {
       if (mode === DEFAULT_MODE) {
-        this.$store.dispatch(FILE_OPEN_ACTION, {name: fileName, directoryFullPath: this.fullPath, env: this.env})
+        this.$store.dispatch(FILE_OPEN_ACTION, {filePath: this.getFullPath(fileName)})
       }
     },
     onClickFolderItem (e, folderName, mode) {
       var folderData = this.getFileData(folderName)
       folderData.open = !folderData.open
+      this.onOpen(this.getFullPath(folderName), folderData.open)
+      this.$store.dispatch(FOLDER_OPEN_ACTION, {folderPath: this.getFullPath(folderName)})
     },
     onContextmenu (e, name, isDirectory) {
       return isDirectory ? this.onFolderContextmenu(e, name) : this.onFileContextmenu(e, name)
@@ -168,10 +188,52 @@ export default {
     onFolderContextmenu (e, name) {
       this.contextMenuTarget = name
       this.$refs.folderCtxMenu.open()
+      this.$store.dispatch(FOLDER_OPEN_ACTION, {folderPath: this.getFullPath(name)})
     },
     onClickContextmenuRename (e) {
       var fileData = this.getFileData(this.contextMenuTarget)
       fileData.mode = RENAME_MODE
+    },
+    onClickContextmenuDuplicate (e) {
+      this.fs.readFile(this.contextMenuTargetFullPath, (err, content) => {
+        if (err) {
+          console.log(err)
+          return err
+        }
+
+        this.getNewName(this.fullPath, this.contextMenuTarget).then((newName) => {
+          var newFilePath = this.path.join(this.fullPath, newName)
+
+          this.fs.writeFile(newFilePath, content.toString(), (err) => {
+            if (err) {
+              console.log(err)
+              return err
+            }
+            this.update()
+          })
+        })
+      })
+    },
+    onClickContextmenuCopyPath (e) {
+      var copyString = this.contextMenuTargetFullPath
+      var tmp = document.createElement('div')
+      var pre = document.createElement('pre')
+      pre.style.webkitUserSelect = 'auto'
+      pre.style.userSelect = 'auto'
+
+      tmp.appendChild(pre).textContent = copyString
+
+      var s = tmp.style
+      s.position = 'fixed'
+      s.right = '200%'
+
+      document.body.appendChild(tmp)
+      document.getSelection().selectAllChildren(tmp)
+
+      document.execCommand('copy')
+
+      // 要素削除
+      document.body.removeChild(tmp)
     },
     onClickContextmenuDelete (e) {
       var target = this.contextMenuTarget
@@ -217,33 +279,49 @@ export default {
         this.update(true)
       })
     },
-    deleteFolderRecursive (targetPath, promises = Promise.resolve()) {
-      var promise
-
-      var stats = this.fs.statSync(targetPath)
-
-      if (stats.isDirectory()) {
-        var files = this.fs.readdirSync(targetPath)
-
-        files.forEach((fileName) => {
-          let fullPath = this.path.join(targetPath, fileName)
-          promises = this.deleteFolderRecursive(fullPath, promises)
+    deleteFolderRecursive (targetPath) {
+      return new Promise((resolve, reject) => {
+        // read stat
+        this.fs.stat(targetPath, (err, stats) => {
+          if (err) {
+            return reject(err)
+          }
+          return resolve(stats.isDirectory())
         })
-
-        promise = () => {
+      }).then((isDirectory) => {
+        if (isDirectory) {
+          // read child directory
           return new Promise((resolve, reject) => {
-            this.fs.rmdir(targetPath, (err) => {
+            this.fs.readdir(targetPath, (err, files) => {
               if (err) {
-                reject(err)
-                return
+                return reject(err)
               }
-              resolve(targetPath)
+              return resolve(files)
+            })
+          }).then((files) => {
+            // delete children
+            var promises = files.map((fileName) => {
+              let fullPath = this.path.join(targetPath, fileName)
+              return this.deleteFolderRecursive(fullPath, promises)
+            })
+            return Promise.all(promises)
+          }).then(() => {
+            // delete current directory
+            return new Promise((resolve, reject) => {
+              console.log('rmdir', targetPath)
+              this.fs.rmdir(targetPath, (err) => {
+                if (err) {
+                  reject(err)
+                  return
+                }
+                resolve(targetPath)
+              })
             })
           })
-        }
-      } else {
-        promise = () => {
+        } else {
+          // unlink file
           return new Promise((resolve, reject) => {
+            console.log('unlink', targetPath)
             this.fs.unlink(targetPath, (err) => {
               if (err) {
                 reject(err)
@@ -253,48 +331,34 @@ export default {
             })
           })
         }
-      }
-
-      promises = promises.then(promise)
-
-      return promises
+      })
     },
     onClickContextmenuNewFile (e) {
-      var fileName = this.newFileName
-      var count = 1
-      while (this.fs.existsSync(this.path.join(this.contextMenuTargetFullPath, fileName))) {
-        fileName = `${this.newFileName}${count}`
-        count++
-      }
+      this.getNewName(this.contextMenuTargetFullPath, this.newFileName).then((newName) => {
+        const filePath = this.path.join(this.contextMenuTargetFullPath, newName)
+        console.log(filePath)
 
-      const filePath = this.path.join(this.contextMenuTargetFullPath, fileName)
+        this.fs.writeFile(filePath, '', (err) => {
+          if (err) {
+            console.log(err)
+            return false
+          }
 
-      this.fs.writeFile(filePath, '', (err) => {
-        if (err) {
-          console.log(err)
-          return false
-        }
-
-        this.update(true)
+          this.update(true)
+        })
       })
     },
     onClickContextmenuNewFolder (e) {
-      var folderName = this.newFolderName
+      this.getNewName(this.contextMenuTargetFullPath, this.newFolderName).then((newName) => {
+        const folderPath = this.path.join(this.contextMenuTargetFullPath, newName)
+        this.fs.mkdir(this.path.join(folderPath), 0o777, (err) => {
+          if (err) {
+            console.log(err)
+            return false
+          }
 
-      var count = 1
-      while (this.fs.existsSync(this.path.join(this.contextMenuTargetFullPath, folderName))) {
-        folderName = `${this.newFileName}${count}`
-        count++
-      }
-
-      const folderPath = this.path.join(this.contextMenuTargetFullPath, folderName)
-      this.fs.mkdir(this.path.join(folderPath), 0o777, (err) => {
-        if (err) {
-          console.log(err)
-          return false
-        }
-
-        this.update(true)
+          this.update(true)
+        })
       })
     },
     onRequestRename (e, oldName, newName, isDirectory) {
@@ -311,12 +375,14 @@ export default {
       }
 
       // Already exist
-      if (this.fs.existsSync(this.getFullPath(newName))) {
-        this.updateFileData(oldName, 'notification', `${newName} is alreay exists`)
-        return
-      }
-
-      return this.rename(oldName, newName)
+      this.fs.exists(this.getFullPath(newName), (err, exists) => {
+        if (err) {
+          return this.updateFileData(oldName, 'notification', err)
+        } else if (exists) {
+          return this.updateFileData(oldName, 'notification', `${newName} is alreay exists`)
+        }
+        return this.rename(oldName, newName)
+      })
     },
     rename (oldName, newName) {
       this.fs.rename(this.getFullPath(oldName), this.getFullPath(newName), (err) => {
@@ -365,6 +431,26 @@ export default {
       setTimeout(() => {
         this.updateFileData(name, 'notification', '')
       }, time)
+    },
+    onOpen (fullPath, isOpen) {
+      this.$emit('open', fullPath, isOpen)
+    },
+    getNewName (path, baseName) {
+      var count = 1
+      var newName = baseName
+      return new Promise((resolve, reject) => {
+        this.fs.readdir(path, (err, files) => {
+          if (err) {
+            return reject(err)
+          }
+
+          while (files.indexOf(newName) !== -1) {
+            count++
+            newName = `${baseName}${count}`
+          }
+          return resolve(newName)
+        })
+      })
     }
   }
 }
@@ -389,13 +475,21 @@ export default {
 
 .context-menu {
   user-select: none;
-  li {
-    padding: 2px 0px 2px 10px;
-    cursor: default;
-    min-width: 200px;
+  ul {
+    margin-left: 100px;
 
-    &:hover {
-      background-color: rgb(210, 210, 210);
+    li {
+      padding: 2px 0px 2px 10px;
+      cursor: default;
+      min-width: 200px;
+
+      &.new-group {
+        border-top: solid #a0a0a0 1px
+      }
+
+      &:hover {
+        background-color: rgb(210, 210, 210);
+      }
     }
   }
 }

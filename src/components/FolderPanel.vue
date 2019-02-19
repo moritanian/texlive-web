@@ -14,8 +14,11 @@
           :env="env"
           :fullPath="basePath"
           :selectedItemName="selectedItemName"
+          @open="onOpenFolder"
+          :directoryTreeInfo="directoryTreeInfo"
           :excludes="[/^\.hoge/, /\.config$/, /.*__MACOSX/]"></directory-tree>
       </upload-panel>
+      <linear-progress-bar :percentage="80"></linear-progress-bar>
     </div>
   </div>
 </template>
@@ -23,24 +26,29 @@
 import UploadModal from '../components/UploadModal.vue'
 import UploadPanel from '../components/UploadPanel.vue'
 import DirectoryTree from '../components/DirectoryTree.vue'
+import LinearProgressBar from '../components/LinearProgressBar'
 import { mapState } from 'vuex'
 import { UPLOAD_MODAL_OPEN_BUTTON_CLICKED } from '../store/modules/file_system'
 
 export default {
   name: 'FolderPanel',
-  components: {UploadModal, UploadPanel, DirectoryTree},
+  components: {UploadModal, UploadPanel, DirectoryTree, LinearProgressBar},
   data () {
     return {
       uploadIconUrl: require('./../assets/upload-icon.svg'),
-      basePath: '/workspace/'
+      directoryTreeInfo: {}
     }
   },
   computed: {
     ...mapState({
       visibleUploadModal: state => state.fileSystem.visibleUploadModal,
       env: state => state.fileSystem.env,
-      selectedItemName: state => state.editPage.selectedItemName
-    })
+      selectedItemName: state => state.editPage.selectedItemName,
+      basePath: state => state.editPage.workspacePath
+    }),
+    directoryTreeInfoPath () {
+      return this.basePath + '.workspace.config.json'
+    }
   },
   methods: {
     onClickUpload (e) {
@@ -48,6 +56,47 @@ export default {
     },
     uploadedInRootPanel () {
       this.$refs.rootTree.update(true)
+    },
+    onOpenFolder (fullPath, isOpen) {
+      console.log(fullPath, isOpen)
+      if (!this.directoryTreeInfo[fullPath]) {
+        this.directoryTreeInfo[fullPath] = {}
+      }
+      this.directoryTreeInfo[fullPath].open = isOpen
+      this.fs.writeFile(
+        this.directoryTreeInfoPath,
+        JSON.stringify(this.directoryTreeInfo, null, ' '),
+        (err) => {
+          console.log(err)
+        }
+      )
+    },
+    initOperations () {
+      if (!this.env || !this.env.require) {
+        return
+      }
+      this.fs = this.env.require('fs')
+      this.path = this.env.require('path')
+      this.fs.readFile(this.directoryTreeInfoPath, (err, content) => {
+        if (err) {
+          console.log(err)
+          return
+        }
+
+        try {
+          this.directoryTreeInfo = JSON.parse(content.toString())
+        } catch (err) {
+          console.log(err)
+          return err
+        }
+      })
+    },
+  },
+  watch: {
+    env: {
+      handler () {
+        this.initOperations()
+      }
     }
   }
 }

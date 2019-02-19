@@ -8,8 +8,6 @@ import store from './store/store'
 
 Vue.config.productionTip = true
 
-Vue.use(Vuex)
-
 /*
 Vue.use(VueRouter)
 

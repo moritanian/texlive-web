@@ -1,7 +1,7 @@
 import axios from 'axios'
 import PDFTeX from '../../libs/pdftex'
-import {FILE_OPEN_ACTION} from './file_system'
-import {stringToBuffer, utf8ToBase64, base64ToUtf8, bufferToBase64, getFileExtension, isImageFile, nameToMime} from './../../util/util'
+import {FILE_OPEN_ACTION, FOLDER_OPEN_ACTION} from './file_system'
+import {stringToBuffer, bufferToString, utf8ToBase64, base64ToUtf8, bufferToBase64, getFileExtension, isImageFile, nameToMime} from './../../util/util'
 
 /*
 * Mutations
@@ -54,45 +54,47 @@ const validatePdfScalePercent = (percent) => {
   return percent
 }
 
+const initPdfTex = async (commit) => {
+  /* eslint-disable no-undef */
+  // const pdfWorkerPath = './static/texlive.js/pdftex-worker.js'
+  const pdfWorkerPath = './static/texlive.js/worker.js'
+
+  var pdftex = new PDFTeX(pdfWorkerPath)
+  /* eslint-enable no-undef */
+
+  // await pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024)
+  await prepareFile(pdftex)
+
+  pdftex.on_stdout = appendOutput(commit, PDFTEX_OUTPUT_TYPES.INFO)
+  pdftex.on_stderr = appendOutput(commit, PDFTEX_OUTPUT_TYPES.ERROR)
+  pdftex.on_failed = (e) => {
+    commit(COMPILE_FAILED_MUTATION, e)
+    appendOutput(commit, PDFTEX_OUTPUT_TYPES.ERROR)(e)
+  }
+
+  return pdftex
+}
+
 async function prepareFile (pdftex) {
   /* eslint-disable */
-
-  
-
-  //const path = 'https://66.media.tumblr.com/ccbd02ca8f3e3a1d52e20c161c6a53f0/tumblr_phk63jWBu51v6xgkio1_500.jpg'
-  //const path = 'https://upload.wikimedia.org/wikipedia/commons/c/ca/1x1.png'
   const path = 'http://localhost/texlive-web/static/demo/Vue.png'
-  // var res = await axios.get('/static/Vue.png', { responseType: 'blob' })
-  // var res = await axios.get(path, { responseType: 'arraybuffer' })
-  var res = await axios.get(path, { responseType: 'binary' })
-  // var url = window.URL.createObjectURL(res.data)
-  // console.log(url)
-  console.log(res.data.length)
-  var base64 =  utf8ToBase64(res.data)
-  window.base64 = 'data:image/png;base64,' + base64 
-  // pdftex.FS_createDataFile('/', 'Vue.png', res.data, true, true)
-  // pdftex.FS_createDataFile('/', 'test.txt', "hogehoge", true, true)
+  var res = await axios.get(path, {responseType: 'arraybuffer'})
+  var buf0 = res.data
+  
+  await pdftex.FS_createDataFile('/', 'app.png', bufferToString(buf0), true, true)
 
   const img = 'http://localhost/texlive-web/static/Vue.png'
   var buf1
-  var buf0 = stringToBuffer( res.data )
-  console.log(buf0)
-
-  pdftex.FS_createFolder('/', 'demo', true, true)
-  pdftex.FS_createLazyFile('/demo/', 'test.tex', '/static/demo/main.tex', true, true)
    
   await pdftex.FS_createLazyFile('/', 'Vue.png', path, true, false)
   var truePng = await pdftex.FS_readFile('Vue.png')
   var buf2 = stringToBuffer(truePng)
-  console.log(buf2)
 
-  //base64 = utf8_to_b64(truePng)
-  //window.base64 = 'data:image/png;base64,' + base64 
-  
   await pdftex.FS_createDataFile('/', 'test2.png', truePng, true, true)
-  // pdftex.FS_createDataFile('/', 'test2.png', res.data, true, true)
   var r = await pdftex.FS_readFile('test2.png')
   buf1 = stringToBuffer(r)
+
+
 
   var buf12 = []
   var buf02 = []
@@ -101,41 +103,25 @@ async function prepareFile (pdftex) {
   buf2 = new Uint8Array(buf2)
   console.log(buf1.length)
 
+  /*
+  * buf0: binary で取得したaxios
+  * buf1: turpng 書き込み読み出し
+  * buf2: tru png
+  */
+ /*
   for (var i = 0; i < buf1.length; i++) {
     buf12.push(buf1[i] - buf2[i])
     buf02.push(buf0[i] - buf2[i])
   }
   console.log(buf12)
   console.log(buf02)
-
-  // var r1 = pdftex.FS_createDataFile('/', 'Vue.png', '/static/Vue.png', true, true)
-/*
-  var blob = new Blob(r2.result[0], { type: "image/png" });
-  var url = URL.createObjectURL(blob);
-  var image = new Image();
-  image.src = url;
-  console.log("data length: " + data.length);
-  document.body.appendChild(image);
-*/
-  // console.log('set vue png')
-
-
-  /*
-   * prepare default tex file
-   */
-  const DEFAULT_TEX_FILE = '/static/demo/main.tex'
-  var res = await axios.get(DEFAULT_TEX_FILE)
-  /*
-  fs.writeFile(state.targetTexFile, res.data, (err) => {
-    console.log(err)
-  })
   */
-  // state.content = res.data
-
   /* eslint-enable */
 }
 
 const state = {
+  pdftex: null,
+  workspacePath: '/workspace/demo',
   targetTexFile: 'main.tex',
   content: '',
   selectedItemName: '',
@@ -206,27 +192,22 @@ const appendOutput = (commit, type) => (msg) => {
 }
 
 const actions = {
-  [COMPILE_ACTION] ({state, commit}) {
+  async [COMPILE_ACTION] ({state, commit}) {
     commit(COMPILE_START_MUTATION)
-
-    /* eslint-disable no-undef */
-    const pdfWorkerPath = './static/texlive.js/pdftex-worker.js'
-    // const pdfWorkerPath = './static/libs/pdftex-worker.js'
-
-    var pdftex = new PDFTeX(pdfWorkerPath)
-    /* eslint-enable no-undef */
 
     let sourceCode = state.content
 
-    pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024).then(async () => {
-      await prepareFile(pdftex)
+    let promise = Promise.resolve(this.pdftex)
+    if (!this.pdftex) {
+      promise = initPdfTex(commit)
+    }
 
-      pdftex.on_stdout = appendOutput(commit, PDFTEX_OUTPUT_TYPES.INFO)
-      pdftex.on_stderr = appendOutput(commit, PDFTEX_OUTPUT_TYPES.ERROR)
-      pdftex.on_failed = (e) => {
-        commit(COMPILE_FAILED_MUTATION, e)
-        appendOutput(commit, PDFTEX_OUTPUT_TYPES.ERROR)(e)
-      }
+    promise.then(async (pdftex) => {
+      this.pdftex = pdftex
+
+      // await pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024)
+      await pdftex.set_TOTAL_MEMORY(0)
+      //await prepareFile(pdftex)
 
       console.time('Execution time')
       var pdfDataURI = await pdftex.compile(sourceCode)
@@ -241,6 +222,7 @@ const actions = {
       })
     }).catch((e) => {
       console.log(e)
+      console.timeEnd('')
       commit(COMPILE_FAILED_MUTATION, e)
     })
   },
@@ -263,41 +245,35 @@ const actions = {
       }
     })
 
-
-    if (!infoStr) {
-     
-      infoStr = getters.serializedFileInfo
-    }
-
-    var info = JSON.parse(infoStr)
-
-    commit(CONTENT_CHANGED_MUTATION, info)
+    commit(CONTENT_CHANGED_MUTATION)
   },
-  [FILE_OPEN_ACTION] ({state}, {name, directoryFullPath, env}) {
-    var path = env.require('path')
+  [FILE_OPEN_ACTION] ({state, rootState}, {filePath}) {
+    var env = rootState.fileSystem.env
     var fs = env.require('fs')
-    console.log(state)
-    console.log(directoryFullPath, name)
 
     return new Promise((resolve, reject) => {
-      fs.readFile(path.join(directoryFullPath, name), (err, content) => {
+      fs.readFile(filePath, (err, content) => {
         if (err) {
           console.log(err)
           return reject(err)
         }
 
-        if (isImageFile(name)) {
+        if (isImageFile(filePath)) {
           state.visibleImageViewer = true
-          state.imageViewerBase64 = bufferToBase64(content, nameToMime(name))
+          state.imageViewerBase64 = bufferToBase64(content, nameToMime(filePath))
         } else {
           state.visibleImageViewer = false
           state.content = content.toString()
         }
 
-        state.selectedItemName = path.join(directoryFullPath, name)
-        resolve(name)
+        state.selectedItemName = filePath
+        resolve(filePath)
       })
     })
+  },
+  [FOLDER_OPEN_ACTION] ({state, rootState}, {folderPath}) {
+    console.log('folder open', folderPath)
+    state.selectedItemName = folderPath
   }
 }
 

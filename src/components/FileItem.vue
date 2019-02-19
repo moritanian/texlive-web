@@ -1,6 +1,7 @@
 <template>
   <div class="file-item"
     @click="onClick"
+    @dblclick="onDblClick"
     @contextmenu.prevent="onContextmenu"
     :class="{selected: selected}"
     :title="fullPath || name">
@@ -88,6 +89,9 @@ export default {
   methods: {
     onClick (e) {
       this.$emit('clickitem', e, this.name, this.mode, this.isDirectory)
+    },
+    onDblClick (e) {
+      this.$emit('dblclickitem', e, this.name, this.mode, this.isDirectory)
     },
     onContextmenu (e) {
       this.$emit('contextmenu', e, this.name, this.isDirectory)

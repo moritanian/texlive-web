@@ -8,6 +8,7 @@ import {
   CONTENT_LOAD_ACTION, COMPILE_ACTION
 } from '../store/modules/edit_page'
 import * as ace from 'brace'
+import 'brace/ext/searchbox'
 import 'brace/mode/javascript'
 import 'brace/mode/json'
 import 'brace/mode/html'

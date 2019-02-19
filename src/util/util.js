@@ -37,14 +37,17 @@ function bufferToBase64 (buffer, mimeCtype) {
   if (!base64.match(/^data/) && mimeCtype) {
     prefix = `data:${mimeCtype};base64,`
   }
-  console.log('prefix', prefix)
   return prefix + base64
 }
 
-function stringToBuffer (src) {
-  return (new Uint8Array([].map.call(src, function (c) {
+function stringToBuffer (stc) {
+  return (new Uint8Array([].map.call(stc, function (c) {
     return c.charCodeAt(0)
   }))).buffer
+}
+
+function bufferToString (buf) {
+  return String.fromCharCode.apply(null, new Uint8Array(buf))
 }
 
 function utf8ToBase64 (str) {
@@ -73,10 +76,18 @@ function nameToMime (name) {
 }
 
 function loadCORSImageURI (src, omitHeader, width, height) {
-  const corsApiUrl = 'https://cors-anywhere.herokuapp.com/'
-  return axios.get(corsApiUrl + src, {responseType: 'arraybuffer'}).then((res) => {
+  // const corsApiUrl = 'https://cors-anywhere.herokuapp.com/'
+  const corsApiUrl = 'https://cors-any-server.herokuapp.com/'
+  console.log(corsApiUrl)
+  return axios.get(corsApiUrl + src, {
+    responseType: 'arraybuffer',
+    onDownloadProgress: progressEvent => {
+      let percentCompleted = Math.floor((progressEvent.loaded * 100) / progressEvent.total)
+      console.log(percentCompleted)
+    }
+  }).then((res) => {
     return bufferToBase64(res.data)
   })
 }
 
-export {toBlob, bufferToBase64, stringToBuffer, utf8ToBase64, base64ToUtf8, getFileExtension, isImageFile, nameToMime, loadCORSImageURI}
+export {toBlob, bufferToBase64, stringToBuffer, bufferToString, utf8ToBase64, base64ToUtf8, getFileExtension, isImageFile, nameToMime, loadCORSImageURI}

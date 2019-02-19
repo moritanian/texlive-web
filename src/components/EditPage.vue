@@ -75,7 +75,8 @@ export default {
       totalPageCount: state => state.editPage.pdfTotalPageCount,
       currentPage: state => state.editPage.pdfCurrentPage,
       env: state => state.fileSystem.env,
-      targetTexFile: state => state.editPage.targetTexFile
+      targetTexFile: state => state.editPage.targetTexFile,
+      workspacePath: state => state.editPage.workspacePath
     }),
     ...mapGetters({
       errorCount: 'pdftexOutputErrorCount',
@@ -100,7 +101,6 @@ export default {
     }
   },
   mounted () {
-   
   },
   methods: {
     onClickZoomIn () {
@@ -130,9 +130,9 @@ export default {
         if (this.env) {
           this.fs = this.env.require('fs')
           var path = this.env.require('path')
-          var parsed = path.parse(this.targetTexFile)
+          var filePath = path.join(this.workspacePath, this.targetTexFile)
           this.$store.dispatch(
-            FILE_OPEN_ACTION, {name: parsed.base, directoryFullPath: parsed.dir, env: this.env}
+            FILE_OPEN_ACTION, {filePath: filePath}
           ).then(() => {
             this.$store.dispatch(COMPILE_ACTION)
           })

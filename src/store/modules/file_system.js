@@ -13,56 +13,73 @@ export const UPLOAD_MODAL_CLOSE_BUTTON_CLICKED = 'UPLOAD_MODAL_CLOSE_BUTTON_CLIC
 // File upload
 export const FILE_UPLOADED_ACTION = 'FILE_UPLOADED_ACTION'
 export const FILE_OPEN_ACTION = 'FILE_OPEN_ACTION'
+export const FOLDER_OPEN_ACTION = 'FOLDER_OPEN_ACTION'
 
-const env = {}
+axios('/static/demo.zip', {responseType: 'arraybuffer'}).then((response) => {
+  return response.data
+}).then((zipData) => {
+  var Buffer = BrowserFS.BFSRequire('buffer').Buffer
 
-BrowserFS.install(env)
-BrowserFS.configure({
-  fs: 'LocalStorage'
-}, (e) => {
-  if (e) {
-    // An error happened!
-    throw e
-  }
+  BrowserFS.configure({
+    fs: 'MountableFileSystem',
+    options: {
+      '/zip': {
+        fs: 'ZipFS',
+        options: {
+          // Wrap as Buffer object.
+          zipData: Buffer.from(zipData)
+        }
+      },
+      '/workspace': {
+        fs: 'OverlayFS',
+        options: {
+          readable: {
+            fs: 'ZipFS',
+            options: {
+              zipData: Buffer.from(zipData)
+            }
+          },
+          writable: {
+            fs: 'IndexedDB',
+            options: {
+              storeName: 'site'
+            }
+          }
+        }
+      },
+      '/tmp': { fs: 'InMemory' },
+      '/home': { fs: 'IndexedDB', options: {} }
+    }
+  }, (e) => {
+    if (e) {
+      // An error occurred.
+      throw e
+    }
+    // Otherwise, BrowserFS is ready to use!
+    var env = {}
+    BrowserFS.install(env)
+    state.env = env
+    initFileSystem()
+  })
 })
 
+/*
+// Grab the BrowserFS Emscripten FS plugin.
+var BFS = new BrowserFS.EmscriptenFS()
+console.log(BFS)
+// Create the folder that we'll turn into a mount point.
+BrowserFS.createFolder(BrowserFS.root, 'data', true, true)
+// Mount BFS's root folder into the '/data' folder.
+BrowserFS.mount(BFS, {root: '/'}, '/data')
+
+*/
+
 async function initFileSystem () {
-  const png = 'http://localhost/texlive-web/static/demo/Vue.png'
-  var res = await axios.get(png, { responseType: 'arraybuffer' })
-  var base64String = btoa(String.fromCharCode(...new Uint8Array(res.data)))
-
-  // require('fs') is changed by webpack
-  const fs = env.require('fs')
-  /*
-  fs.writeFile('/src/test.txt', 'Cool, I can do this in the browser!', (err) => {
-    if (err) {
-      console.log(err)
-      return
-    }
-    fs.readFile('/src/test.txt', (err, contents) => {
-      if (err) {
-        console.log(err)
-        return
-      }
-      console.log('%c' + contents.toString(), 'color: red')
-    })
-  })
-
-  fs.writeFile('/Vue.png', base64String, 'base64', (err) => {
-    console.log(err)
-  })
-  
-  fs.mkdir('/src', (err) => {
-    console.log(err)
-  })
-  */
-  
+  const fs = state.env.require('fs')
 }
 
-initFileSystem()
-
 const state = {
-  env: env,
+  env: {},
   visibleUploadModal: false
 }
 
