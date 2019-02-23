@@ -41,7 +41,7 @@ export default {
       this.showPercentage += add
       if (this.showPercentage >= this.percentage) {
         this.$emit('endAnimation')
-        return       
+        return
       }
 
       this.animationHandler = requestAnimationFrame(this.animate)
@@ -82,7 +82,6 @@ export default {
       display: block;
       background-color: #ECECEC;
       background-image: -webkit-gradient(linear, 0 0, 100% 100%,color-stop(.25, #F9F9F9), color-stop(.25, transparent),color-stop(.5, transparent), color-stop(.5, #F9F9F9),color-stop(.75, #F9F9F9), color-stop(.75, transparent),to(transparent));
-      -webkit-background-size: 14px 14px;
       animation-duration: 0.5s;
       animation-name: linear-movement;
       animation-iteration-count: infinite;

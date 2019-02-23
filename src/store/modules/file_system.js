@@ -1,6 +1,5 @@
 import * as BrowserFS from 'BrowserFS'
 import axios from 'axios'
-import {bufferToBase64, isImageFile} from './../../util/util'
 /*
 * Mutations
 */
@@ -59,24 +58,8 @@ axios('/static/demo.zip', {responseType: 'arraybuffer'}).then((response) => {
     var env = {}
     BrowserFS.install(env)
     state.env = env
-    initFileSystem()
   })
 })
-
-/*
-// Grab the BrowserFS Emscripten FS plugin.
-var BFS = new BrowserFS.EmscriptenFS()
-console.log(BFS)
-// Create the folder that we'll turn into a mount point.
-BrowserFS.createFolder(BrowserFS.root, 'data', true, true)
-// Mount BFS's root folder into the '/data' folder.
-BrowserFS.mount(BFS, {root: '/'}, '/data')
-
-*/
-
-async function initFileSystem () {
-  const fs = state.env.require('fs')
-}
 
 const state = {
   env: {},

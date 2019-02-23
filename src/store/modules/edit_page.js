@@ -52,7 +52,8 @@ const validatePdfScalePercent = (percent) => {
 }
 
 const initPdfTex = async (commit) => {
-  const pdfWorkerPath = './static/texlive.js/worker.js'
+  // const pdfWorkerPath = './static/texlive.js/worker.js'
+  const pdfWorkerPath = './static/texlive.js/pdftex-worker.js'
 
   var pdftex = new PDFTeX(pdfWorkerPath)
 
@@ -185,7 +186,6 @@ const actions = {
       this.pdftex = pdftex
 
       // await pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024)
-      await pdftex.set_TOTAL_MEMORY(0)
       await prepareFile(pdftex, fs, path, state.workspacePath)
 
       console.time('Execution time')

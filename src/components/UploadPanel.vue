@@ -12,10 +12,9 @@
   </div>
 </template>
 <script>
-import {bufferToBase64, utf8ToBase64, isImageFile, loadCORSImageURI} from './../util/util'
+import {isImageFile, loadCORSImageURI} from './../util/util'
 import LinearProgressBar from '../components/LinearProgressBar'
 import FileOperationable from '../mixins/FileOperationable'
-const util = require('util')
 
 export default {
   name: 'UploadPanel',

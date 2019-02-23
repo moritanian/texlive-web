@@ -13,7 +13,7 @@
 </template>
 <script>
 import UploadPanel from '../components/UploadPanel.vue'
-import { FILE_UPLOADED_ACTION, UPLOAD_MODAL_CLOSE_BUTTON_CLICKED } from '../store/modules/file_system'
+import { UPLOAD_MODAL_CLOSE_BUTTON_CLICKED } from '../store/modules/file_system'
 
 export default {
   name: 'UploadModal',

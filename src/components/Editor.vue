@@ -5,7 +5,7 @@
 import { mapState } from 'vuex'
 import {
   CONTENT_CHANGED_MUTATION, CONTENT_SAVE_ACTION,
-  CONTENT_LOAD_ACTION, COMPILE_ACTION
+  COMPILE_ACTION
 } from '../store/modules/edit_page'
 import * as ace from 'brace'
 import 'brace/ext/searchbox'
