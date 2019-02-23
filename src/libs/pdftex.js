@@ -2,71 +2,25 @@ var PDFTeX = function (optWorkerPath) {
   if (!optWorkerPath) {
     optWorkerPath = 'pdftex-worker.js'
   }
-  var worker = new Worker(optWorkerPath)
+
+  this.optWorkerPath = optWorkerPath
+
   var self = this
   var initialized = false
 
-  self.on_stdout = function (msg) {
-    console.log(msg)
-  }
-
-  self.on_stderr = function (msg) {
-    console.log(msg)
-  }
-
-  self.on_failed = function (e) {
-    console.error(e)
-  }
-
-  worker.addEventListener('error', (e) => { self.on_failed(e) }, false)
-
-  worker.onmessage = function (ev) {
-    var data = JSON.parse(ev.data)
-    var msgId
-
-    if (!('command' in data)) {
-      console.log('missing command!', data)
-    }
-    switch (data['command']) {
-      case 'ready':
-        onreadyResolve(true)
-        break
-      case 'stdout':
-      case 'stderr':
-        self['on_' + data['command']](data['contents'])
-        break
-      default:
-        // console.debug('< received', data)
-        msgId = data['msg_id']
-        if (('msg_id' in data) && (msgId in promises)) {
-          promises[msgId](data['result'])
-        } else {
-          console.warn('Unknown worker message ' + msgId + '!')
-        }
-    }
-  }
-
-  var onreadyResolve
+  this.promises = []
+  this.onreadyResolve = null
   var onready = new Promise((resolve, reject) => {
-    onreadyResolve = resolve
+    this.onreadyResolve = resolve
   })
 
-  var promises = []
-  var chunkSize
-
-  var sendCommand = function (cmd) {
-    return new Promise((resolve, reject) => {
-      var msgId = promises.push(resolve) - 1
-
-      onready.then(() => {
-        cmd['msg_id'] = msgId
-        // console.debug('> sending', cmd)
-        worker.postMessage(JSON.stringify(cmd))
-      })
-    })
+  var curry = function (obj, fn, args) {
+    return function () {
+      return obj[fn].apply(obj, args)
+    }
   }
-
-  var determineChunkSize = function () {
+  /* eslint-disable no-unused-vars */
+  function determineChunkSize () {
     var size = 1024
     var max
     var min
@@ -106,6 +60,25 @@ var PDFTeX = function (optWorkerPath) {
 
     return size
   }
+  /* eslint-enable no-unused-vars */
+
+  this.initWorker()
+
+  function initFile () {
+    return curry(self, 'FS_createLazyFilesFromList', ['/', 'texlive.lst', './texlive', true, true])()
+  }
+
+  var sendCommand = (cmd) => {
+    return new Promise((resolve, reject) => {
+      var msgId = this.promises.push(resolve) - 1
+
+      onready.then(() => {
+        cmd['msg_id'] = msgId
+        // console.debug('> sending', cmd)
+        this.worker.postMessage(JSON.stringify(cmd))
+      })
+    })
+  }
 
   var createCommand = function (command) {
     self[command] = function () {
@@ -126,13 +99,7 @@ var PDFTeX = function (optWorkerPath) {
   createCommand('FS_createLazyFilesFromList') // parent, list, parent_url, canRead, canWrite
   createCommand('set_TOTAL_MEMORY') // size
 
-  var curry = function (obj, fn, args) {
-    return function () {
-      return obj[fn].apply(obj, args)
-    }
-  }
-
-  self.compile = function (sourceCode) {
+  self.compile = (sourceCode) => {
     return self.compileRaw(sourceCode).then((binaryPdf) => {
       return new Promise((resolve, reject) => {
         if (binaryPdf === false) {
@@ -140,25 +107,28 @@ var PDFTeX = function (optWorkerPath) {
         }
 
         var pdfDataurl = 'data:application/pdf;charset=binary;base64,' + window.btoa(binaryPdf)
+
+        setTimeout(() => {
+          this.initWorker()
+          initFile()
+        }, 1)
+
         return resolve(pdfDataurl)
       })
     })
   }
 
   self.compileRaw = function (sourceCode) {
-    if (typeof (chunkSize) === 'undefined') {
-      chunkSize = determineChunkSize()
-    }
-
     var commands
     if (initialized) {
       commands = [
-        curry(self, 'FS_unlink', ['/input.tex']),
+        curry(self, 'FS_createDataFile', ['/', 'input.tex', sourceCode, true, true]),
+
       ]
     } else {
       commands = [
-        curry(self, 'FS_createDataFile', ['/', 'input.tex', sourceCode, true, true]),
         curry(self, 'FS_createLazyFilesFromList', ['/', 'texlive.lst', './texlive', true, true]),
+        curry(self, 'FS_createDataFile', ['/', 'input.tex', sourceCode, true, true]),
       ]
     }
 
@@ -166,23 +136,71 @@ var PDFTeX = function (optWorkerPath) {
       initialized = true
       return sendCommand({
         'command': 'run',
-        'arguments': ['-interaction=nonstopmode', '-output-format', 'pdf', 'input.tex'],
+        'arguments': ['-interaction=nonstopmode', '-output-format', 'pdf', 'input.tex', '-o', '/input.pdf'],
         // 'arguments': ['-debug-format', '-output-format', 'pdf', '&latex', 'input.tex'],
       })
     }
 
     var getPDF = function () {
-      // console.log(arguments)
       return self.FS_readFile('/input.pdf')
     }
 
     var p = commands[0]()
-    for (var i = 1; i < commands.length; i++) {
-      p = p.then(commands[i])
+    for (let i = 1; i < commands.length; i++) {
+      p = p.then(() => {
+        return commands[i]()
+      })
     }
     return p.then(sendCompile)
       .then(getPDF)
   }
+}
+
+PDFTeX.prototype.initWorker = function () {
+  if (this.worker) {
+    this.worker.terminate()
+  }
+
+  this.worker = new Worker(this.optWorkerPath)
+  this.worker.addEventListener('error', (e) => { this.on_failed(e) }, false)
+
+  this.worker.onmessage = (ev) => {
+    var data = JSON.parse(ev.data)
+    var msgId
+
+    if (!('command' in data)) {
+      console.log('missing command!', data)
+    }
+    switch (data['command']) {
+      case 'ready':
+        this.onreadyResolve(true)
+        break
+      case 'stdout':
+      case 'stderr':
+        this['on_' + data['command']](data['contents'])
+        break
+      default:
+        // console.debug('< received', data)
+        msgId = data['msg_id']
+        if (('msg_id' in data) && (msgId in this.promises)) {
+          this.promises[msgId](data['result'])
+        } else {
+          console.warn('Unknown worker message ' + msgId + '!')
+        }
+    }
+  }
+}
+
+PDFTeX.prototype.on_stdout = function (msg) {
+  console.log(msg)
+}
+
+PDFTeX.prototype.on_stderr = function (msg) {
+  console.log(msg)
+}
+
+PDFTeX.prototype.on_failed = function (e) {
+  console.error(e)
 }
 
 export default PDFTeX
