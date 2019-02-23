@@ -1,7 +1,6 @@
-import axios from 'axios'
 import PDFTeX from '../../libs/pdftex'
 import {FILE_OPEN_ACTION, FOLDER_OPEN_ACTION} from './file_system'
-import {stringToBuffer, bufferToString, utf8ToBase64, base64ToUtf8, bufferToBase64, getFileExtension, isImageFile, nameToMime} from './../../util/util'
+import {bufferToString, bufferToBase64, isImageFile, nameToMime, execDirectoryRecursive} from './../../util/util'
 
 /*
 * Mutations
@@ -39,8 +38,6 @@ export const PDFTEX_OUTPUT_TYPES = {
   ERROR: 'ERROR'
 }
 
-const STORAGE_KEY = 'textlive-web'
-
 const validatePdfScalePercent = (percent) => {
   const MIN_PERCENT = 10
   const MAX_PERCENT = 1000
@@ -55,15 +52,9 @@ const validatePdfScalePercent = (percent) => {
 }
 
 const initPdfTex = async (commit) => {
-  /* eslint-disable no-undef */
-  // const pdfWorkerPath = './static/texlive.js/pdftex-worker.js'
   const pdfWorkerPath = './static/texlive.js/worker.js'
 
   var pdftex = new PDFTeX(pdfWorkerPath)
-  /* eslint-enable no-undef */
-
-  // await pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024)
-  await prepareFile(pdftex)
 
   pdftex.on_stdout = appendOutput(commit, PDFTEX_OUTPUT_TYPES.INFO)
   pdftex.on_stderr = appendOutput(commit, PDFTEX_OUTPUT_TYPES.ERROR)
@@ -75,48 +66,33 @@ const initPdfTex = async (commit) => {
   return pdftex
 }
 
-async function prepareFile (pdftex) {
-  /* eslint-disable */
-  const path = 'http://localhost/texlive-web/static/demo/Vue.png'
-  var res = await axios.get(path, {responseType: 'arraybuffer'})
-  var buf0 = res.data
-  
-  await pdftex.FS_createDataFile('/', 'app.png', bufferToString(buf0), true, true)
+async function prepareFile (pdftex, fs, path, rootPath) {
+  return execDirectoryRecursive(fs, path, rootPath, (fs, path, targetPath, isDirectory) => {
+    return new Promise((resolve, reject) => {
+      var parsed = path.parse(targetPath)
+      var relativePath = path.relative(rootPath, parsed.dir) || '/'
 
-  const img = 'http://localhost/texlive-web/static/Vue.png'
-  var buf1
-   
-  await pdftex.FS_createLazyFile('/', 'Vue.png', path, true, false)
-  var truePng = await pdftex.FS_readFile('Vue.png')
-  var buf2 = stringToBuffer(truePng)
+      if (relativePath === '..') {
+        return resolve()
+      }
 
-  await pdftex.FS_createDataFile('/', 'test2.png', truePng, true, true)
-  var r = await pdftex.FS_readFile('test2.png')
-  buf1 = stringToBuffer(r)
+      if (isDirectory) {
+        pdftex.FS_createFolder(relativePath, parsed.base, true, true).then(() => {
+          resolve()
+        }).catch(reject)
+      } else {
+        fs.readFile(targetPath, (err, content) => {
+          if (err) {
+            return reject(err)
+          }
 
-
-
-  var buf12 = []
-  var buf02 = []
-  buf0 = new Uint8Array(buf0)
-  buf1 = new Uint8Array(buf1)
-  buf2 = new Uint8Array(buf2)
-  console.log(buf1.length)
-
-  /*
-  * buf0: binary で取得したaxios
-  * buf1: turpng 書き込み読み出し
-  * buf2: tru png
-  */
- /*
-  for (var i = 0; i < buf1.length; i++) {
-    buf12.push(buf1[i] - buf2[i])
-    buf02.push(buf0[i] - buf2[i])
-  }
-  console.log(buf12)
-  console.log(buf02)
-  */
-  /* eslint-enable */
+          pdftex.FS_createDataFile(relativePath, parsed.base, bufferToString(content), true, true).then(() => {
+            resolve()
+          }).catch(reject)
+        })
+      }
+    })
+  })
 }
 
 const state = {
@@ -192,8 +168,11 @@ const appendOutput = (commit, type) => (msg) => {
 }
 
 const actions = {
-  async [COMPILE_ACTION] ({state, commit}) {
+  async [COMPILE_ACTION] ({state, commit, rootState}) {
     commit(COMPILE_START_MUTATION)
+
+    var fs = rootState.fileSystem.env.require('fs')
+    var path = rootState.fileSystem.env.require('path')
 
     let sourceCode = state.content
 
@@ -207,7 +186,7 @@ const actions = {
 
       // await pdftex.set_TOTAL_MEMORY(80 * 1024 * 1024)
       await pdftex.set_TOTAL_MEMORY(0)
-      //await prepareFile(pdftex)
+      await prepareFile(pdftex, fs, path, state.workspacePath)
 
       console.time('Execution time')
       var pdfDataURI = await pdftex.compile(sourceCode)

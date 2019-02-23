@@ -90,4 +90,63 @@ function loadCORSImageURI (src, omitHeader, width, height) {
   })
 }
 
-export {toBlob, bufferToBase64, stringToBuffer, bufferToString, utf8ToBase64, base64ToUtf8, getFileExtension, isImageFile, nameToMime, loadCORSImageURI}
+function execDirectoryRecursive (fs, path, targetPath, lambda, order = false) {
+  function readdir (targetPath) {
+    return new Promise((resolve, reject) => {
+      fs.readdir(targetPath, (err, files) => {
+        if (err) {
+          return reject(err)
+        }
+        return resolve(files)
+      })
+    })
+  }
+
+  function stat (targetPath) {
+    return new Promise((resolve, reject) => {
+      // read stat
+      fs.stat(targetPath, (err, stats) => {
+        if (err) {
+          return reject(err)
+        }
+        return resolve(stats)
+      })
+    })
+  }
+
+  function expandChildren (files) {
+    // delete children
+    var promises = files.map((fileName) => {
+      let fullPath = path.join(targetPath, fileName)
+      return execDirectoryRecursive(fs, path, fullPath, lambda, order)
+    })
+    return Promise.all(promises)
+  }
+
+  function directoryFunc () {
+    return lambda(fs, path, targetPath, true)
+  }
+
+  var directoryExections = order ? [expandChildren, directoryFunc] : [directoryFunc, expandChildren]
+
+  function fileFunc () {
+    return lambda(fs, path, targetPath, false)
+  }
+
+  return stat(targetPath).then((stat) => {
+    var isDirectory = stat.isDirectory()
+
+    if (isDirectory) {
+      // read child directory
+      return readdir(targetPath).then((files) => {
+        return directoryExections[0](files).then(() => {
+          return directoryExections[1](files)
+        })
+      })
+    } else {
+      return fileFunc()
+    }
+  })
+}
+
+export {toBlob, bufferToBase64, stringToBuffer, bufferToString, utf8ToBase64, base64ToUtf8, getFileExtension, isImageFile, nameToMime, loadCORSImageURI, execDirectoryRecursive}
