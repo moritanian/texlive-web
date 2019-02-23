@@ -302,7 +302,7 @@ export default {
             // delete children
             var promises = files.map((fileName) => {
               let fullPath = this.path.join(targetPath, fileName)
-              return this.deleteFolderRecursive(fullPath, promises)
+              return this.deleteFolderRecursive(fullPath)
             })
             return Promise.all(promises)
           }).then(() => {

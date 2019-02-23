@@ -1,5 +1,7 @@
 <template>
   <div class="file-item"
+    :draggable="draggable"
+    @dragstart="onDragStart"
     @click="onClick"
     @dblclick="onDblClick"
     @contextmenu.prevent="onContextmenu"
@@ -83,10 +85,17 @@ export default {
       }
       return url
     },
+    draggable () {
+      return this.mode === DEFAULT_MODE
+    },
     DEFAULT_MODE: () => DEFAULT_MODE,
     RENAME_MODE: () => RENAME_MODE
   },
   methods: {
+    onDragStart (e) {
+      // e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', this.fullPath)
+    },
     onClick (e) {
       this.$emit('clickitem', e, this.name, this.mode, this.isDirectory)
     },

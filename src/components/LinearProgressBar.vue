@@ -23,13 +23,11 @@ export default {
     }
   },
   mounted () {
-    this.animate = this.animate.bind(this)
-    requestAnimationFrame(this.animate)
+    this.startAnimate()
   },
   methods: {
     animate () {
-      const maxSpeed = 2
-      requestAnimationFrame(this.animate)
+      const maxSpeed = 3
       var diff = this.percentage - this.showPercentage
       if (diff < 0) {
         this.showPercentage = this.percentage
@@ -41,6 +39,27 @@ export default {
         add = diff
       }
       this.showPercentage += add
+      if (this.showPercentage >= this.percentage) {
+        this.$emit('endAnimation')
+        return       
+      }
+
+      this.animationHandler = requestAnimationFrame(this.animate)
+    },
+    startAnimate () {
+      this.animate = this.animate.bind(this)
+
+      if (this.animationHandler) {
+        cancelAnimationFrame(this.animationHandler)
+      }
+      requestAnimationFrame(this.animate)
+    }
+  },
+  watch: {
+    percentage: {
+      handler () {
+        this.startAnimate()
+      }
     }
   }
 }
@@ -58,7 +77,7 @@ export default {
     overflow: hidden;
 
     .animation-area {
-      width: 200%;
+      width: calc(100% + 28px);
       height: 100%;
       display: block;
       background-color: #ECECEC;
