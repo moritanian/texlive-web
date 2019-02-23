@@ -58,7 +58,6 @@ export default {
       this.$refs.rootTree.update(true)
     },
     onOpenFolder (fullPath, isOpen) {
-      console.log(fullPath, isOpen)
       if (!this.directoryTreeInfo[fullPath]) {
         this.directoryTreeInfo[fullPath] = {}
       }
@@ -67,7 +66,9 @@ export default {
         this.directoryTreeInfoPath,
         JSON.stringify(this.directoryTreeInfo, null, ' '),
         (err) => {
-          console.log(err)
+          if (err) {
+            console.log(err)
+          }
         }
       )
     },

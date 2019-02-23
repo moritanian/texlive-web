@@ -47,7 +47,16 @@ function stringToBuffer (stc) {
 }
 
 function bufferToString (buf) {
-  return String.fromCharCode.apply(null, new Uint8Array(buf))
+  var chunkSize = 1024 * 10
+  var divideNum = Math.ceil(buf.byteLength / chunkSize)
+  var str = ''
+  for (var i = 0; i < divideNum; i++) {
+    var slicedBuf = buf.slice(i * chunkSize, (i + 1) * chunkSize)
+    var uint8Array = new Uint8Array(slicedBuf)
+    str += String.fromCharCode.apply(null, uint8Array)
+  }
+  return str
+  // return buf.toString('ascii', 0, buf.length)
 }
 
 function utf8ToBase64 (str) {

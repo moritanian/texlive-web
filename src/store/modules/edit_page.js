@@ -251,7 +251,6 @@ const actions = {
     })
   },
   [FOLDER_OPEN_ACTION] ({state, rootState}, {folderPath}) {
-    console.log('folder open', folderPath)
     state.selectedItemName = folderPath
   }
 }
