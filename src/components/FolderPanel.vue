@@ -18,7 +18,6 @@
           :directoryTreeInfo="directoryTreeInfo"
           :excludes="[/^\.hoge/, /\.config$/, /.*__MACOSX/]"></directory-tree>
       </upload-panel>
-      <linear-progress-bar :percentage="80"></linear-progress-bar>
     </div>
   </div>
 </template>
@@ -26,13 +25,12 @@
 import UploadModal from '../components/UploadModal.vue'
 import UploadPanel from '../components/UploadPanel.vue'
 import DirectoryTree from '../components/DirectoryTree.vue'
-import LinearProgressBar from '../components/LinearProgressBar'
 import { mapState } from 'vuex'
 import { UPLOAD_MODAL_OPEN_BUTTON_CLICKED } from '../store/modules/file_system'
 
 export default {
   name: 'FolderPanel',
-  components: {UploadModal, UploadPanel, DirectoryTree, LinearProgressBar},
+  components: {UploadModal, UploadPanel, DirectoryTree},
   data () {
     return {
       uploadIconUrl: require('./../assets/upload-icon.svg'),
