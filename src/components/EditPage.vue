@@ -1,13 +1,24 @@
 <template>
   <split class="edit-content" :push-other-panes="false">
-    <split-area :size="15" :minSize="10">
+
+    <split-area :size="folderPanelSize" :minSize="10">
       <folder-panel></folder-panel>
     </split-area>
-    <split-area :size="33" :minSize="10">
+
+    <split-area :size="editorSize" :minSize="10">
       <editor editorId="editor-1" class="editor" v-show="visibleEditor"/>
       <image-viewer :base64="imageViewerBase64" :name="selectedItemName" class="image-viewer" v-show="visibleImageViewer"></image-viewer>
     </split-area>
-    <split-area class="pdf-content" :size="52" :minSize="10">
+
+    <split-area :size="chatPanelSize" :minSize="0" v-if="visibleChatPanel">
+      <chat-panel class="chat-panel"/>
+    </split-area>
+
+    <split-area class="pdf-content" :size="pdfContentSize" :minSize="10">
+      <ul class="communication-operations">
+        <li @click="onClickSharing" class=""><img width="20" height="20" :src="shareIconUrl"></li>
+        <li @click="onClickChat" class=""><img width="20" height="20" :src="chatIconUrl"></li>
+      </ul>
       <ul class="pdf-operations">
         <li class="scale-operation-group">
           <ul>
@@ -54,7 +65,8 @@ import ImageViewer from '../components/ImageViewer.vue'
 import PdfViewer from '../components/PdfViewer.vue'
 import TexOutput from '../components/TexOutput.vue'
 import DownloadPdfButton from '../components/DownloadPdfButton.vue'
-import {COMPILE_ACTION, PDF_ZOOMIN_MUTATION, PDF_ZOOMOUT_MUTATION, TOGGLE_TEX_OUTPUT} from '../store/modules/edit_page'
+import ChatPanel from '../components/chat/ChatPanel.vue'
+import {COMPILE_ACTION, PDF_ZOOMIN_MUTATION, PDF_ZOOMOUT_MUTATION, TOGGLE_TEX_OUTPUT, TOGGLE_CHAT_PANEL, INIT_SHARING_ACTION} from '../store/modules/edit_page'
 import { FILE_OPEN_ACTION } from '../store/modules/file_system'
 
 import {Split, SplitArea} from 'vue-split-panel'
@@ -62,9 +74,10 @@ import LoadingModal from '../components/LoadingModal.vue'
 
 export default {
   name: 'EditPage',
-  components: {FolderPanel, Editor, ImageViewer, PdfViewer, TexOutput, DownloadPdfButton, LoadingModal, Split, SplitArea},
+  components: {FolderPanel, Editor, ImageViewer, PdfViewer, TexOutput, DownloadPdfButton, LoadingModal, Split, SplitArea, ChatPanel},
   computed: {
     ...mapState({
+      visibleChatPanel: state => state.editPage.visibleChatPanel,
       visibleImageViewer: state => state.editPage.visibleImageViewer,
       imageViewerBase64: state => state.editPage.imageViewerBase64,
       selectedItemName: state => state.editPage.selectedItemName,
@@ -90,6 +103,18 @@ export default {
     },
     visibleEditor () {
       return !this.visibleImageViewer
+    },
+    folderPanelSize () {
+      return this.visibleChatPanel ? 10 : 15
+    },
+    chatPanelSize () {
+      return this.visibleChatPanel ? 20 : 1
+    },
+    editorSize () {
+      return this.visibleChatPanel ? 30 : 33
+    },
+    pdfContentSize () {
+      return this.visibleChatPanel ? 40 : 52
     }
   },
   data () {
@@ -97,7 +122,9 @@ export default {
       currentPageInput: 1,
       enlargeIconUrl: require('./../assets/enlarge-icon.svg'),
       reduceIconUrl: require('./../assets/reduce-icon.svg'),
-      infoIconUrl: require('./../assets/info-icon.svg')
+      infoIconUrl: require('./../assets/info-icon.svg'),
+      shareIconUrl: require('./../assets/share-icon.svg'),
+      chatIconUrl: require('./../assets/chat-icon.svg')
     }
   },
   mounted () {
@@ -122,6 +149,12 @@ export default {
       if (!isNaN(value)) {
         this.currentPageInput = value
       }
+    },
+    onClickSharing (e) {
+      this.$store.dispatch(INIT_SHARING_ACTION)
+    },
+    onClickChat (e) {
+      this.$store.commit(TOGGLE_CHAT_PANEL)
     }
   },
   watch: {
@@ -178,6 +211,11 @@ ul {
 li {
   display: inline-block;
   vertical-align: top;
+}
+
+ul.communication-operations {
+  height: 24px;
+  padding: 2px 0px;
 }
 
 ul.pdf-operations {
@@ -294,7 +332,7 @@ input.current-page {
 }
 
 .viewer-container {
-  height: calc( 100% - 28px);
+  height: calc( 100% - 56px);
   position: relative;
 }
 

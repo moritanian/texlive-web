@@ -23,6 +23,7 @@ export const PDF_ZOOMOUT_MUTATION = 'PDF_ZOOMOUT_MUTATION'
 export const PDF_CHANGED_CURRENT_PAGE_MUTATION = 'PDF_CHANGED_CURRENT_PAGE_MUTATION'
 
 export const TOGGLE_TEX_OUTPUT = 'TOGGLE_TEX_OUTPUT'
+export const TOGGLE_CHAT_PANEL = 'TOGGLE_CHAT_PANEL'
 
 /*
  * Actions
@@ -32,6 +33,9 @@ export const TOGGLE_TEX_OUTPUT = 'TOGGLE_TEX_OUTPUT'
 export const COMPILE_ACTION = 'COMPILE_ACTION'
 export const CONTENT_SAVE_ACTION = 'CONTENT_SAVE_ACTION'
 export const CONTENT_LOAD_ACTION = 'CONTENT_LOAD_ACTION'
+
+// communication
+export const INIT_SHARING_ACTION = 'INIT_SHARING_ACTION'
 
 export const PDFTEX_OUTPUT_TYPES = {
   INFO: 'INFO',
@@ -115,6 +119,7 @@ const state = {
   visibleUploadModal: false,
   visibleImageViewer: false,
   imageViewerBase64: null,
+  visibleChatPanel: true
 }
 
 const mutations = {
@@ -158,6 +163,9 @@ const mutations = {
   },
   [TOGGLE_TEX_OUTPUT] (state) {
     state.visibleTexOutput = !state.visibleTexOutput
+  },
+  [TOGGLE_CHAT_PANEL] (state) {
+    state.visibleChatPanel = !state.visibleChatPanel
   }
 }
 
@@ -252,6 +260,8 @@ const actions = {
   },
   [FOLDER_OPEN_ACTION] ({state, rootState}, {folderPath}) {
     state.selectedItemName = folderPath
+  },
+  [INIT_SHARING_ACTION] () {
   }
 }
 
