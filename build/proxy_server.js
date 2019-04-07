@@ -4,6 +4,7 @@ const httpProxy = require('http-proxy');
 const app = express();
 
 app.use('/static', express.static(__dirname + '/../static/'));
+app.use('/static/texlivejs', express.static(__dirname + '/../node_modules/texlive.js'));
 
 var proxy = httpProxy.createProxyServer({});
 proxy.on('error', function(err, req, res) {

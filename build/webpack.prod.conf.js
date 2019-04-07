@@ -119,6 +119,15 @@ const webpackConfig = merge(baseWebpackConfig, {
         to: config.build.assetsSubDirectory,
         ignore: ['.*']
       }
+    ]),
+    new CopyWebpackPlugin([
+      {
+        from: path.resolve(__dirname, '../node_modules/texlive.js'),
+        to: path.join(config.dev.assetsSubDirectory, 'texlivejs'),
+        // to: config.dev.assetsSubDirectory,
+        ignore: ['.*']
+        //ignore: ['\.txt$']
+      },
     ])
   ]
 })

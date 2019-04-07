@@ -53,7 +53,7 @@ const validatePdfScalePercent = (percent) => {
 
 const initPdfTex = async (commit) => {
   // const pdfWorkerPath = './static/texlive.js/worker.js'
-  const pdfWorkerPath = './static/texlive.js/pdftex-worker.js'
+  const pdfWorkerPath = './static/texlivejs/pdftex-worker.js'
 
   var pdftex = new PDFTeX(pdfWorkerPath)
 
