@@ -20,27 +20,27 @@ Web client standalone tex editor using [texlivejs](http://manuels.github.io/texl
 
 ``` bash
 # clone repo
-git clone --recursive https://github.com/moritanian/texlive-web.git
+git clone  https://github.com/moritanian/texlive-web.git
 cd texlive-web
 
 # install dependencies
-npm install
+yarn install
 
 # serve with hot reload at localhost:8000
-npm run start
+yarn start
 
 # build for production with minification
-npm run build
+yarn build
 
 # build for production and view the bundle analyzer report
-npm run build --report
+yarn build --report
 
 # run unit tests
-npm run unit
+yarn unit
 
 # run e2e tests
-npm run e2e
+yarn e2e
 
 # run all tests
-npm test
+yarn test
 ```
