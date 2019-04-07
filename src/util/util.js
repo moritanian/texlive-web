@@ -31,7 +31,7 @@ function toBlob (base64, mimeCtype) {
 }
 
 function bufferToBase64 (buffer, mimeCtype) {
-  var base64 = new Buffer(buffer, 'binary').toString('base64')
+  var base64 = Buffer.from(buffer, 'binary').toString('base64')
 
   var prefix = ''
   if (!base64.match(/^data/) && mimeCtype) {
@@ -40,8 +40,8 @@ function bufferToBase64 (buffer, mimeCtype) {
   return prefix + base64
 }
 
-function stringToBuffer (stc) {
-  return (new Uint8Array([].map.call(stc, function (c) {
+function stringToBuffer (str) {
+  return (new Uint8Array([].map.call(str, function (c) {
     return c.charCodeAt(0)
   }))).buffer
 }
@@ -91,8 +91,8 @@ function loadCORSImageURI (src, omitHeader, width, height) {
   return axios.get(corsApiUrl + src, {
     responseType: 'arraybuffer',
     onDownloadProgress: progressEvent => {
-      let percentCompleted = Math.floor((progressEvent.loaded * 100) / progressEvent.total)
-      console.log(percentCompleted)
+      // let percentCompleted = Math.floor((progressEvent.loaded * 100) / progressEvent.total)
+      // console.log(percentCompleted)
     }
   }).then((res) => {
     return bufferToBase64(res.data)
